@@ -1,0 +1,329 @@
+#define ESP_I2S_h
+#include <Arduino.h>
+#include "pin_config.h"
+#include "Arduino_GFX_Library.h"
+#include "Arduino_DriveBus_Library.h"
+#include <lvgl.h>
+#include <SPI.h>
+#include <Update.h>
+#include "esp_ota_ops.h"
+#include "esp_system.h"
+#include "XPowersLib.h"
+#include <esp_sleep.h>
+
+#include "SDManager.h"
+#include "ScreenManager.h"
+#include "HomeScreen.h"
+#include "AppState.h"
+
+#include "lv_fs_sd.h"
+
+#include "HomeNavigation.h"
+#include "TimeManager.h"
+
+#include "ESP_I2S.h"
+I2SClass i2s;
+
+#include "esp_check.h"
+#include "es8311.h"
+#include "canon.h"
+
+#define EXAMPLE_SAMPLE_RATE 16000
+#define EXAMPLE_VOICE_VOLUME 80                  // 0 - 100
+#define EXAMPLE_MIC_GAIN (es8311_mic_gain_t)(3)  // 0 - 7
+#define EXAMPLE_RECV_BUF_SIZE (10000)
+
+const char *TAG = "esp32p4_i2s_es8311";
+
+esp_err_t es8311_codec_init(void) {
+  es8311_handle_t es_handle = es8311_create(0, ES8311_ADDRRES_0);
+  ESP_RETURN_ON_FALSE(es_handle, ESP_FAIL, TAG, "es8311 create failed");
+  const es8311_clock_config_t es_clk = {
+    .mclk_inverted = false,
+    .sclk_inverted = false,
+    .mclk_from_mclk_pin = true,
+    .mclk_frequency = EXAMPLE_SAMPLE_RATE * 256,
+    .sample_frequency = EXAMPLE_SAMPLE_RATE
+  };
+
+  ESP_ERROR_CHECK(es8311_init(es_handle, &es_clk, ES8311_RESOLUTION_16, ES8311_RESOLUTION_16));
+  ESP_RETURN_ON_ERROR(es8311_sample_frequency_config(es_handle, es_clk.mclk_frequency, es_clk.sample_frequency), TAG, "set es8311 sample frequency failed");
+  ESP_RETURN_ON_ERROR(es8311_microphone_config(es_handle, false), TAG, "set es8311 microphone failed");
+
+  ESP_RETURN_ON_ERROR(es8311_voice_volume_set(es_handle, EXAMPLE_VOICE_VOLUME, NULL), TAG, "set es8311 volume failed");
+  ESP_RETURN_ON_ERROR(es8311_microphone_gain_set(es_handle, EXAMPLE_MIC_GAIN), TAG, "set es8311 microphone gain failed");
+  return ESP_OK;
+}
+
+
+// Buffer di disegno LVGLgvbff 
+static lv_disp_draw_buf_t draw_buf;
+static lv_color_t buf[LCD_WIDTH * LCD_HEIGHT / 10];
+
+Arduino_DataBus *bus = new Arduino_ESP32QSPI(
+  LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1,
+  LCD_SDIO2, LCD_SDIO3);
+
+Arduino_GFX *gfx = new Arduino_SH8601(bus, -1, 0, false, LCD_WIDTH, LCD_HEIGHT);
+
+// Inizializzazione touch
+std::shared_ptr<Arduino_IIC_DriveBus> IIC_Bus = std::make_shared<Arduino_HWIIC>(IIC_SDA, IIC_SCL, &Wire);
+std::unique_ptr<Arduino_FT3x68> FT3168(new Arduino_FT3x68(IIC_Bus, FT3168_DEVICE_ADDRESS));
+
+#if LV_USE_LOG != 0
+/* Serial debugging */
+void my_print(const char *buf) {
+  Serial.printf(buf);
+  Serial.flush();
+}
+#endif
+
+SDManager sdManager;
+ScreenManager screenManager;
+XPowersPMU power;
+bool isAlwaysOn = false;
+bool backHome = false;
+unsigned long bootPressedTime = 0;
+int brightness = 120;
+HomeNavigation home;
+
+#define LVGL_TICK_PERIOD_MS 2
+
+void lv_tick_task(void *arg) {
+  lv_tick_inc(LVGL_TICK_PERIOD_MS);
+}
+
+/* --- Display flush callback --- */
+void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
+  uint32_t w = (area->x2 - area->x1 + 1);
+  uint32_t h = (area->y2 - area->y1 + 1);
+
+#if (LV_COLOR_16_SWAP != 0)
+  gfx->draw16bitBeRGBBitmap(area->x1, area->y1, (uint16_t *)&color_p->full, w, h);
+#else
+  gfx->draw16bitRGBBitmap(area->x1, area->y1, (uint16_t *)&color_p->full, w, h);
+#endif
+
+  lv_disp_flush_ready(disp);
+}
+
+void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
+  int32_t x = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::TOUCH_COORDINATE_X);
+  int32_t y = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::TOUCH_COORDINATE_Y);
+  int32_t fingers = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::Value_Information::TOUCH_FINGER_NUMBER);
+
+  
+  bool touched = fingers > 0;
+
+  if (touched) {
+    data->state = LV_INDEV_STATE_PR;
+    data->point.x = x;
+    data->point.y = y;
+  } else {
+    data->state = LV_INDEV_STATE_REL;
+  }
+
+}
+
+
+
+void alwaysOn() {
+  gfx->fillScreen(BLACK);
+  gfx->Display_Brightness(50);
+
+  gfx->setTextColor(0x7BEF);
+
+  // Mostra percentuale batteria
+  gfx->setTextSize(5);
+  gfx->setCursor(100, 100);
+  gfx->println(String(power.getBatteryPercent()) + "%");
+
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    // Array per mesi e giorni in italiano
+    const char* mesi[] = {
+      "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+      "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+    };
+    const char* giorni[] = {
+      "Domenica", "Lunedi", "Martedi", "Mercoledi",
+      "Giovedi", "Venerdi", "Sabato"
+    };
+
+    // Ottieni i singoli campi
+    int giorno = timeinfo.tm_mday;
+    int mese = timeinfo.tm_mon;   // 0-11
+    int anno = timeinfo.tm_year + 1900;
+    int weekday = timeinfo.tm_wday; // 0=dom, 1=lun, ...
+
+    // Prima riga: Mese Anno
+    gfx->setTextSize(3);
+    gfx->setCursor(40, 300);
+    gfx->printf("%s %d", mesi[mese], anno);
+
+    // Seconda riga: giorno, nome giorno
+    gfx->setCursor(40, 340);
+    gfx->printf("%d, %s", giorno, giorni[weekday]);
+
+    // Terza riga: ora
+    gfx->setTextSize(5);
+    gfx->setCursor(40, 400);
+    gfx->printf("%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+  }
+
+  // Se è in carica
+  if (power.isCharging()) {
+    gfx->setTextSize(2);
+    gfx->setCursor(100, 200);
+    gfx->println("Charging");
+  }
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+  pinMode(0, INPUT_PULLUP);
+
+  pinMode(PA, OUTPUT),
+    digitalWrite(PA, HIGH);
+
+  i2s.setPins(BCLKPIN, WSPIN, DIPIN, DOPIN, MCLKPIN);
+  if (!i2s.begin(I2S_MODE_STD, EXAMPLE_SAMPLE_RATE, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO, I2S_STD_SLOT_BOTH)) {
+    Serial.println("Failed to initialize I2S bus!");
+    return;
+  }
+
+  Wire.begin(IIC_SDA, IIC_SCL);
+  
+  es8311_codec_init();
+
+  gfx->begin();
+  gfx->fillScreen(BLACK);
+  gfx->Display_Brightness(brightness);
+
+  // Inizializza PMU
+  if (!power.begin(Wire, AXP2101_SLAVE_ADDRESS, IIC_SDA, IIC_SCL)) {
+    //USB//Serial.println("Power management init failed!");
+  } else {
+    //USB//Serial.println("Power management ready");
+  }
+
+
+  lv_init();
+  lv_fs_sd_init();
+
+  if(!sdManager.init()) {
+    Serial.println("Cannot Mound Card");
+  } else {
+    Serial.println("Card Mounted");
+  }
+
+  TimeManager::loadTime();
+
+  #if LV_USE_LOG != 0
+  lv_log_register_print_cb(my_print); /* register print function for debugging */
+  #endif
+
+
+  // Buffer
+  lv_disp_draw_buf_init(&draw_buf, buf, NULL, LCD_WIDTH * LCD_HEIGHT / 10);
+
+  // Display driver
+  static lv_disp_drv_t disp_drv;
+  lv_disp_drv_init(&disp_drv);
+  disp_drv.hor_res = LCD_WIDTH;
+  disp_drv.ver_res = LCD_HEIGHT;
+  disp_drv.flush_cb = my_disp_flush;
+  disp_drv.draw_buf = &draw_buf;
+  lv_disp_drv_register(&disp_drv);
+
+  // Input driver (touch)
+  static lv_indev_drv_t indev_drv;
+  lv_indev_drv_init(&indev_drv);
+  indev_drv.type = LV_INDEV_TYPE_POINTER;
+  indev_drv.read_cb = my_touchpad_read;
+  lv_indev_drv_register(&indev_drv);
+
+  // Crea un timer che chiama lv_tick_inc periodicamente
+  const esp_timer_create_args_t periodic_timer_args = {
+    .callback = &lv_tick_task,
+    .name = "lv_tick"
+  };
+
+  esp_timer_handle_t periodic_timer;
+  esp_timer_create(&periodic_timer_args, &periodic_timer);
+  esp_timer_start_periodic(periodic_timer, LVGL_TICK_PERIOD_MS * 1000);
+
+  //ScreenManager::get().changeScreen(new HomeScreen());
+  home.open();
+}
+
+void loop() {
+  ScreenManager screenManager = ScreenManager::get();
+  
+  if(isAlwaysOn) {
+    alwaysOn();
+    esp_sleep_enable_timer_wakeup(59 * 1000000ULL);
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)0, 0);
+    esp_light_sleep_start();
+    esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+    
+
+    if(wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
+      isAlwaysOn = false;
+      delay(1000);
+      // Forza LVGL a ridisegnare lo screen principale
+      lv_obj_t *scr = lv_scr_act();
+      lv_obj_clean(scr);      // cancella vecchi oggetti
+      home.open();
+      //screenManager.changeScreen(new HomeScreen());
+      lv_timer_handler();
+
+      return;
+    } 
+    return;
+  }
+  if(backHome) {
+      backHome = false;
+      home.open();
+      lv_timer_handler();
+  }
+  lv_timer_handler();
+  if(digitalRead(0) == LOW && bootPressedTime == 0) {
+    bootPressedTime = millis();
+  }
+  if(digitalRead(0) == HIGH && bootPressedTime != 0) {
+    if(millis() - bootPressedTime < 1000) {
+      if(screenManager.getCurrent() != nullptr) {
+        if(screenManager.getCurrent()->getId() != APP_HOME) {
+          home.open();
+        }
+      }
+    } else {
+      isAlwaysOn = true;
+    }
+    bootPressedTime = 0;
+  }
+  screenManager.loop();
+  //i2s.write((uint8_t *)canon_pcm, canon_pcm_len);
+}
+
+void returnToLauncher() {
+    // Ottieni la partizione di boot attiva (launcher)
+    const esp_partition_t* launcherPartition = esp_ota_get_next_update_partition(nullptr);
+
+    if (!launcherPartition) {
+        Serial.println("Errore: impossibile trovare la partizione del launcher!");
+        return;
+    }
+
+    // Imposta la partizione del launcher come bootable
+    if (esp_ota_set_boot_partition(launcherPartition) != ESP_OK) {
+        Serial.println("Errore: impossibile cambiare partizione di boot");
+        return;
+    }
+
+    Serial.println("Riavvio per tornare al launcher...");
+    delay(500);
+    esp_restart();  // Riavvia ESP32, partirà dal launcher
+}
