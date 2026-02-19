@@ -36,6 +36,61 @@ public:
     }
   }
 
+  virtual void onTouch(int32_t x, int32_t y, int32_t fingers) {
+    if(fingers > 0) {
+        if(!touching) {
+            // Nuovo tocco
+            touching = true;
+            startX = x;
+            startY = y;
+            dragging = false;
+            touchedTime = millis();
+        } else {
+            int deltaX = x - startX;
+            int deltaY = y - startY;
+
+
+            // Se supero la soglia, inizio drag
+            if(!dragging && (abs(deltaX) > 5 || abs(deltaY) > 5) && millis() - touchedTime > 100) {
+            Serial.printf("%d : %d", deltaX, deltaY);
+                dragging = true;
+                touchReleaseTime = 0;
+            }
+
+            if(dragging) {
+                // Muovo il mouse solo se c'è un delta significativo
+                                if(abs(deltaX) < 50 && abs(deltaY) < 50) {
+                    bleMouse.move(deltaX, deltaY);
+                }
+
+                // Aggiorno le coordinate di riferimento
+                startX = x;
+                startY = y;
+
+            }
+        }
+    } else {
+        // Rilascio
+        if(touching) {
+            touching = false;
+
+            if(!dragging) {
+                // Click sinistro o destro
+                if(millis() - touchedTime > 1000) {
+                    bleMouse.click(MOUSE_RIGHT);
+                } else {
+                    bleMouse.click(MOUSE_LEFT);
+                }
+            }
+
+            if(bleMouse.isPressed()) bleMouse.release();
+
+            dragging = false;
+            touchedTime = 0;
+        }
+    }
+}
+
   void pointer_event_handler(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
 
@@ -98,4 +153,4 @@ public:
         }
     }
 }
-}
+};

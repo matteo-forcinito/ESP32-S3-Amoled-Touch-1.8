@@ -1,18 +1,29 @@
+#define ESP_I2S_h
 #include <Arduino.h>
 #include "pin_config.h"
 #include "Arduino_GFX_Library.h"
 #include "Arduino_DriveBus_Library.h"
 #include <lvgl.h>
 #include <SPI.h>
-#include <SD.h>
 #include <Update.h>
 #include "esp_ota_ops.h"
 #include "esp_system.h"
+#include "XPowersLib.h"
+#include <esp_sleep.h>
+
 
 #include "ScreenManager.h"
 #include "BTRemoteApp.h"
 
-// Buffer di disegno LVGL
+#define EXAMPLE_SAMPLE_RATE 16000
+#define EXAMPLE_VOICE_VOLUME 80                  // 0 - 100
+#define EXAMPLE_MIC_GAIN (es8311_mic_gain_t)(3)  // 0 - 7
+#define EXAMPLE_RECV_BUF_SIZE (10000)
+
+const char *TAG = "esp32p4_i2s_es8311";
+
+
+// Buffer di disegno LVGLgvbff 
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[LCD_WIDTH * LCD_HEIGHT / 10];
 
