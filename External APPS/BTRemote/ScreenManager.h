@@ -28,6 +28,10 @@ public:
         }, 500, old);
     }
 
+    void onButtonPressed() {
+        if(current) current->onButtonPressed();
+    }
+
     void loop() {
         if (current) current->loop();
     }

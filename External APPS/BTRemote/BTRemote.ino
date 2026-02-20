@@ -10,6 +10,7 @@
 #include "esp_system.h"
 #include "XPowersLib.h"
 #include <esp_sleep.h>
+#include "Utils.h"
 
 
 #include "ScreenManager.h"
@@ -122,13 +123,24 @@ void setup() {
   ScreenManager::get().changeScreen(new BTRemoteApp());
 }
 
+unsigned long buttonPressedTime = 0;
+
 void loop() {
+  ScreenManager sm = ScreenManager::get();
+
   lv_timer_handler();
-  if(digitalRead(0) == LOW) {
-    returnToLauncher();
+  if(digitalRead(0) == HIGH && buttonPressedTime != 0) {
+    if(millis() - buttonPressedTime > 3000) {
+      returnToLauncher();
+    } else {
+      sm.onButtonPressed();
+    }
+    buttonPressedTime = 0;
+  }
+  if(digitalRead(0) == LOW && buttonPressedTime == 0) {
+    buttonPressedTime = millis();
   }
 
-  ScreenManager sm = ScreenManager::get();
   sm.loop();
 
   int32_t x = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::TOUCH_COORDINATE_X);

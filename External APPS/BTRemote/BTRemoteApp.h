@@ -21,15 +21,17 @@ class BTRemoteApp : public AppScreen {
 private:
 public:
   void onCreate() {
-    labelStatus = lv_label_create(root);
+    labelStatus = lv_label_create(container);
     lv_label_set_text(labelStatus, "In Attesa di dispositivo");
     bleMouse.begin();
   }
 
-  void loop() {
+  void onLoop() {
     if(connected && !bleMouse.isConnected()) {
-      connected = false;
-      lv_label_set_text(labelStatus, "In Attesa di dispositivo");
+      //connected = false;
+      lv_label_set_text(labelStatus, "Riconnessione..");
+
+      esp_restart();
     }
 
     if(!connected && bleMouse.isConnected()) {
