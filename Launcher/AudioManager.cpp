@@ -93,6 +93,7 @@ void AudioManager::unmute() {
 }
 
 void AudioManager::playTap() {
+    //TODO: improve feedback sound (currently a bad click due to the short buffer and the I2S latency)
     if (!initialized) return;
 
     const int samples = 200; // durata brevissima

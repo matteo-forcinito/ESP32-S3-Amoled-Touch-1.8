@@ -286,9 +286,10 @@ void loop() {
   int32_t y = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::TOUCH_COORDINATE_Y);
   int32_t fingers = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::Value_Information::TOUCH_FINGER_NUMBER);
   if(fingers > 0) {
-    AudioManager::playTap();
+    // actually disabled due to a bad feedback sound
+    // AudioManager::playTap();
   }
-  
+
   screenManager.touch(x, y, fingers);
   //i2s.write((uint8_t *)canon_pcm, canon_pcm_len);
 }
