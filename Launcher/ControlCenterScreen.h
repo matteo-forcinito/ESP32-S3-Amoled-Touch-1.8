@@ -1,5 +1,6 @@
 #pragma once
 #include "AppScreen.h"
+#include "AudioManager.h"
 
 extern Arduino_GFX *gfx;
 extern int brightness;
@@ -39,6 +40,13 @@ public:
     */
 
     lv_obj_t *sliderAudio = createSlider(slidersContainer, LV_SYMBOL_AUDIO);
+    lv_slider_set_range(sliderAudio, 0, 100);
+    lv_obj_add_event_cb(sliderAudio, [](lv_event_t *e) {
+        lv_obj_t *slider = lv_event_get_target(e);
+        int value = lv_slider_get_value(slider);
+        AudioManager::setVolume(value);
+        // Handle audio volume change
+    }, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_t *sliderBright = createSlider(slidersContainer, LV_SYMBOL_EYE_OPEN);
     lv_slider_set_range(sliderBright, 10, 255);
     lv_slider_set_value(sliderBright, brightness, LV_ANIM_OFF);
