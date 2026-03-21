@@ -73,6 +73,22 @@ public:
     lv_obj_t *settingsButton = createIconButton(buttonsContainer, LV_SYMBOL_SETTINGS);
     lv_obj_t *audioButton = createIconButton(buttonsContainer, LV_SYMBOL_AUDIO);
 
+    lv_obj_t *bootTimeLabel = lv_label_create(buttonsContainer);
+
+    uint64_t s = esp_timer_get_time() / 1000000ULL;
+
+    uint32_t hours = s / 3600;
+    s %= 3600;
+
+    uint32_t minutes = s / 60;
+    uint32_t seconds = s % 60;
+
+    char buf[32];
+    sprintf(buf, "%02u:%02u:%02u", hours, minutes, seconds);
+
+    
+    lv_label_set_text(bootTimeLabel, buf);
+
   }
 
   lv_obj_t *createSlider(lv_obj_t *parent, const char *symbol) {

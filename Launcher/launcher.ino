@@ -106,43 +106,21 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
 
 
 void alwaysOn() {
-  gfx->fillScreen(BLACK);
-  gfx->Display_Brightness(50);
+  //gfx->fillScreen(BLACK);
+  gfx->Display_Brightness(20);
 
   gfx->setTextColor(0x7BEF);
 
   // Mostra percentuale batteria
+   gfx->fillRect(100, 100, 200, 60, BLACK);
   gfx->setTextSize(5);
   gfx->setCursor(100, 100);
   gfx->println(String(power.getBatteryPercent()) + "%");
 
+
   struct tm timeinfo;
   if (getLocalTime(&timeinfo)) {
-    // Array per mesi e giorni in italiano
-    const char* mesi[] = {
-      "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-      "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
-    };
-    const char* giorni[] = {
-      "Domenica", "Lunedi", "Martedi", "Mercoledi",
-      "Giovedi", "Venerdi", "Sabato"
-    };
-
-    // Ottieni i singoli campi
-    int giorno = timeinfo.tm_mday;
-    int mese = timeinfo.tm_mon;   // 0-11
-    int anno = timeinfo.tm_year + 1900;
-    int weekday = timeinfo.tm_wday; // 0=dom, 1=lun, ...
-
-    // Prima riga: Mese Anno
-    gfx->setTextSize(3);
-    gfx->setCursor(40, 300);
-    gfx->printf("%s %d", mesi[mese], anno);
-
-    // Seconda riga: giorno, nome giorno
-    gfx->setCursor(40, 340);
-    gfx->printf("%d, %s", giorno, giorni[weekday]);
-
+    gfx->fillRect(40, 400, 200, 60, BLACK);
     // Terza riga: ora
     gfx->setTextSize(5);
     gfx->setCursor(40, 400);
@@ -151,6 +129,7 @@ void alwaysOn() {
 
   // Se è in carica
   if (power.isCharging()) {
+    gfx->fillRect(100, 200, 200, 60, BLACK);
     gfx->setTextSize(2);
     gfx->setCursor(100, 200);
     gfx->println("Charging");
@@ -237,13 +216,22 @@ void loop() {
   
   if(isAlwaysOn) {
     alwaysOn();
-    esp_sleep_enable_timer_wakeup(59 * 1000000ULL);
+    
+    int seconds = 0;
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+      seconds = timeinfo.tm_sec;
+    }
+    int sleepTime = 60 - seconds;
+    esp_sleep_enable_timer_wakeup(60 * 1000000ULL);
     esp_sleep_enable_ext0_wakeup((gpio_num_t)0, 0);
     esp_light_sleep_start();
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
     
 
     if(wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
+      //Wire.begin(IIC_SDA, IIC_SCL); // riattiva touch
+      setCpuFrequencyMhz(240);
       isAlwaysOn = false;
       delay(1000);
       // Forza LVGL a ridisegnare lo screen principale
@@ -272,11 +260,42 @@ void loop() {
       if(screenManager.getCurrent() != nullptr) {
         if(screenManager.getCurrent()->getId() != APP_HOME) {
           home.open();
-        }
+        } 
       }
     } else {
+      gfx->fillScreen(BLACK);
       isAlwaysOn = true;
+      //Wire.end();  // spegne I2C touch
       AudioManager::ampOff();
+      struct tm timeinfo;
+      if (getLocalTime(&timeinfo)) {
+        // Array per mesi e giorni in italiano
+        const char* mesi[] = {
+          "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+          "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+        };
+        const char* giorni[] = {
+          "Domenica", "Lunedi", "Martedi", "Mercoledi",
+          "Giovedi", "Venerdi", "Sabato"
+        };
+
+        // Ottieni i singoli campi
+        int giorno = timeinfo.tm_mday;
+        int mese = timeinfo.tm_mon;   // 0-11
+        int anno = timeinfo.tm_year + 1900;
+        int weekday = timeinfo.tm_wday; // 0=dom, 1=lun, ...
+
+        // Prima riga: Mese Anno
+        gfx->setTextSize(3);
+        gfx->setCursor(40, 300);
+        gfx->printf("%s %d", mesi[mese], anno);
+
+        // Seconda riga: giorno, nome giorno
+        gfx->setCursor(40, 340);
+        gfx->printf("%d, %s", giorno, giorni[weekday]);
+      }
+
+      setCpuFrequencyMhz(80);
     }
     bootPressedTime = 0;
   }
