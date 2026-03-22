@@ -1,7 +1,10 @@
 #pragma once
 #include "AppScreen.h"
-#include "AudioManager.h"
+#include "WiFiScreen.h"
+#include <Arduino_GFX_Library.h>
+//#include "AudioManager.h"
 
+class Arduino_GFX;
 extern Arduino_GFX *gfx;
 extern int brightness;
 
@@ -44,7 +47,7 @@ public:
     lv_obj_add_event_cb(sliderAudio, [](lv_event_t *e) {
         lv_obj_t *slider = lv_event_get_target(e);
         int value = lv_slider_get_value(slider);
-        AudioManager::setVolume(value);
+        //AudioManager::setVolume(value);
         // Handle audio volume change
     }, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_t *sliderBright = createSlider(slidersContainer, LV_SYMBOL_EYE_OPEN);
@@ -69,6 +72,9 @@ public:
     //lv_obj_set_scroll_dir(buttonsContainer, LV_DIR_VER);
 
     lv_obj_t *wifiButton = createIconButton(buttonsContainer, LV_SYMBOL_WIFI);
+    lv_obj_add_event_cb(wifiButton, [](lv_event_t *e) {
+      ScreenManager::get().changeScreen(new WiFiScreen());
+    }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *bleButton = createIconButton(buttonsContainer, LV_SYMBOL_BLUETOOTH);
     lv_obj_t *settingsButton = createIconButton(buttonsContainer, LV_SYMBOL_SETTINGS);
     lv_obj_t *audioButton = createIconButton(buttonsContainer, LV_SYMBOL_AUDIO);

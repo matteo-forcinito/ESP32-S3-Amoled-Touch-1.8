@@ -1,7 +1,7 @@
 #pragma once
 #include "AppScreen.h"
 #include "SDManager.h"
-#include "Arduino_GFX_Library.h"
+//#include "Arduino_GFX_Library.h"
 #include "XPowersLib.h"
 //#include "FlashScreen.h"
 #include "FlashScreen.h"
@@ -14,7 +14,7 @@
 #define PLACEHOLDER_PATH "S:/assets/icons/placeholder.bin"
 
 extern XPowersPMU power; 
-extern Arduino_GFX *gfx;
+//extern Arduino_GFX *gfx;
 extern SDManager sdManager;
 
 class HomeScreen : public AppScreen {

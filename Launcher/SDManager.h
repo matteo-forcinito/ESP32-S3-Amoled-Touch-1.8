@@ -14,4 +14,5 @@ public:
     std::vector<String> listAppFolders(const char *path);
     bool isReady() const { return initialized; }
     bool isPathExists(const char *path);
+    File open(const char* path);
 };

@@ -1,4 +1,3 @@
-#define ESP_I2S_h
 #include <Arduino.h>
 #include "pin_config.h"
 #include "Arduino_GFX_Library.h"
@@ -20,8 +19,10 @@
 
 #include "HomeNavigation.h"
 #include "TimeManager.h"
-#include "AudioManager.h"
-
+//#include "AudioManager.h"
+extern "C" {
+  #include "driver/i2s_std.h"
+}
 #include "ESP_I2S.h"
 I2SClass i2s;
 
@@ -141,14 +142,21 @@ void setup() {
   Serial.begin(115200);
   pinMode(0, INPUT_PULLUP);
 
-  if (!i2s.begin(I2S_MODE_STD, EXAMPLE_SAMPLE_RATE, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO, I2S_STD_SLOT_BOTH)) {
+  delay(1000);
+
+  Serial.println("Startup!");
+
+  if (!i2s.begin(I2S_MODE_STD, EXAMPLE_SAMPLE_RATE,
+               I2S_DATA_BIT_WIDTH_16BIT,
+               I2S_SLOT_MODE_STEREO,
+               I2S_STD_SLOT_BOTH)) {
     Serial.println("Failed to initialize I2S bus!");
     return;
   }
 
   Wire.begin(IIC_SDA, IIC_SCL);
 
-  AudioManager::init();
+  //AudioManager::init();
 
   gfx->begin();
   gfx->fillScreen(BLACK);
@@ -240,7 +248,7 @@ void loop() {
       home.open();
       //screenManager.changeScreen(new HomeScreen());
       lv_timer_handler();
-      AudioManager::ampOn();
+      //AudioManager::ampOn();
 
       return;
     } 
@@ -266,7 +274,7 @@ void loop() {
       gfx->fillScreen(BLACK);
       isAlwaysOn = true;
       //Wire.end();  // spegne I2C touch
-      AudioManager::ampOff();
+      //AudioManager::ampOff();
       struct tm timeinfo;
       if (getLocalTime(&timeinfo)) {
         // Array per mesi e giorni in italiano

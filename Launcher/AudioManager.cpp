@@ -1,7 +1,7 @@
 #include "AudioManager.h"
 #include "pin_config.h"
 
-static I2SClass i2s;
+extern I2SClass i2s;
 static es8311_handle_t es_handle = NULL;
 
 bool AudioManager::initialized = false;

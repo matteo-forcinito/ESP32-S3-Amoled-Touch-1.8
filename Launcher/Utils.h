@@ -13,3 +13,11 @@ struct MboxContextWithCallback {
     lv_event_cb_t originalCallback; // 👉 aggiunta qui
     lv_event_t *originalEvent;      // (opzionale, utile se vuoi passare lo stesso evento)
 };
+
+struct WifiNetwork {
+    String ssid = "";
+    String pwd = "";
+    int32_t rssi;
+    bool saved = false;
+    bool connected = false;
+};

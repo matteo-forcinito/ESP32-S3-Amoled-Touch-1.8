@@ -89,6 +89,11 @@ std::vector<String> SDManager::listAppFolders(const char *path) {
     return apps;
 }
 
+File SDManager::open(const char* path) {
+    if (!isReady()) init();
+    return SD_MMC.open(path);
+}
+
 bool SDManager::isPathExists(const char *path) {
     return isReady() && SD_MMC.exists(path);
 }
