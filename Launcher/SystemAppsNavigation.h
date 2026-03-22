@@ -6,6 +6,7 @@
 #include "FlashScreen.h"
 #include "SetTimeNavigation.h"
 #include "MoodeScreen.h"
+#include "WifiQualityScreen.h"
 
 class SystemAppsNavigation : public Navigation {
 public:
@@ -72,6 +73,13 @@ public:
         appsList.emplace_back("moOde", "S:/assets/icons/moOde.bin", [](lv_event_t *e) {
             SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
                 ScreenManager::get().changeScreen(new MoodeScreen());
+            });
+        });
+
+
+        appsList.emplace_back("WifiQuality", "S:/assets/icons/moOde.bin", [](lv_event_t *e) {
+            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
+                ScreenManager::get().changeScreen(new WifiQualityScreen());
             });
         });
 

@@ -79,6 +79,13 @@ public:
     lv_obj_t *settingsButton = createIconButton(buttonsContainer, LV_SYMBOL_SETTINGS);
     lv_obj_t *audioButton = createIconButton(buttonsContainer, LV_SYMBOL_AUDIO);
 
+    lv_obj_t *btnRestart = lv_btn_create(buttonsContainer);
+    lv_obj_set_width(btnRestart, lv_pct(100));
+    lv_obj_t *lblRestart = lv_label_create(btnRestart);
+    lv_label_set_text(lblRestart, "Restart");
+    lv_obj_add_event_cb(btnRestart, [](lv_event_t *e) {
+      esp_restart();
+    }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *bootTimeLabel = lv_label_create(buttonsContainer);
 
     uint64_t s = esp_timer_get_time() / 1000000ULL;

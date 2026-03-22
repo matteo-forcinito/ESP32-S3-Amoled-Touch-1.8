@@ -52,7 +52,12 @@ public:
 
         appsList.emplace_back("Set Auto", LV_SYMBOL_WIFI, [](lv_event_t *e) {
             SetTimeNavigation::onAppClick(e, [](lv_event_t *e){
+              if(WiFi.status() != WL_CONNECTED) {
+                lv_obj_t *mbox = lv_msgbox_create(lv_layer_top(), "Attention", "Devi essere connesso al Wifi!", NULL, true);
+                lv_obj_center(mbox);
+              } else {
                 SetTimeNavigation::setTime();
+              }
             });
         });
 
@@ -61,29 +66,6 @@ public:
 
   static void setTime() {
     Serial.print("Inizializzando l'ora..");
-    WiFi.begin("WINDTRE-CEDF38 2.4GHz", "6djyuwd9mwf4sy9u");
-    unsigned long wifiCheckTime = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - wifiCheckTime < 6000) {
-      Serial.print(".");
-      delay(200);
-      //wifiCheckTime = millis();
-    }
-    if(WiFi.status() != WL_CONNECTED) {
-      wifiCheckTime = millis();
-      WiFi.begin("MERCUSYS_7635", "34067642");
-      while (WiFi.status() != WL_CONNECTED && millis() - wifiCheckTime < 6000) {
-        Serial.print(".");
-        delay(200);
-        //wifiCheckTime = millis();
-      }
-    }
-    if(WiFi.status() != WL_CONNECTED) {
-      //printMessage("impossibile connettersi ad internet..");
-      Serial.println("Cannot connect to wifi");
-      delay(1000);
-      
-      return;
-    }
     //Serial.println("WiFi connected");
     
     configTime(0, 0, "pool.ntp.org");
@@ -99,18 +81,14 @@ public:
     }
 
     if (!getLocalTime(&timeinfo)) {
-      //Serial.println("❌ Time sync failed");
-      //printMessage("Impossibile inizializzare l'ora");
-      delay(1000);
+          lv_obj_t *error = lv_msgbox_create(lv_layer_top(), "Attention", "Errore durante la configurazione!", NULL, true);
+          lv_obj_center(error);
     } else {
+          lv_obj_t *success = lv_msgbox_create(lv_layer_top(), "Attention", "Ora configurata correttamente!", NULL, true);
+          lv_obj_center(success);
       //Serial.printf("✅ Time set: %02d:%02d\n", timeinfo.tm_hour, timeinfo.tm_min);
       //printMessage("Ora inizializzata");
-      TimeManager::saveTime();
-      delay(1000);
 
     }
-
-    WiFi.disconnect(true);  // disattiva per risparmiare batteria
-    WiFi.mode(WIFI_OFF);
   }
 };

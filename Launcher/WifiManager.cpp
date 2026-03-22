@@ -56,7 +56,7 @@ void WifiManager::scanTask(void* param) {
         for(auto &savedNet : savedNetworks) {
             if(savedNet.ssid == net.ssid) {
                 savedNetwork = savedNet;
-                savedNet.rssi = net.rssi;
+                savedNetwork.rssi = net.rssi;
                 found = true;
                 break;
             }
