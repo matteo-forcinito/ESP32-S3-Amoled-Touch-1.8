@@ -16,6 +16,7 @@ typedef enum {
     APP_SETTIME,
     APP_INSTALLER,
     APP_CONTROL_CENTER,
+    APP_USBMSC,
     APP_INVALID_APP
 } AppState;
 

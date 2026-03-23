@@ -30,6 +30,10 @@ private:
 
     unsigned long lastUpdate = 0;
 
+    lv_obj_t *connections;
+    lv_obj_t *wifiConnection;
+
+    bool wifiConnected = false;
 public:
     PaginatorScreen(const std::string &title, std::vector<MenuItem> items)
       : title(title), items(std::move(items)) {}
@@ -42,7 +46,7 @@ public:
         lv_obj_t *header = lv_obj_create(root);
         lv_obj_remove_style_all(header);
         lv_obj_set_style_bg_opa(header, LV_OPA_TRANSP, 0);
-        lv_obj_set_size(header, 340, 40);  // larghezza uguale allo schermo
+        lv_obj_set_size(header, 340, LV_SIZE_CONTENT);  // larghezza uguale allo schermo
         lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
 
         // Imposto flex row per contenitore
@@ -64,6 +68,18 @@ public:
         // Label titolo
         
         timeLabel = lv_label_create(header);
+
+        connections = lv_obj_create(header);
+        lv_obj_remove_style_all(connections);
+        lv_obj_set_flex_flow(connections, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_grow(connections, 1);
+        lv_obj_set_height(connections, LV_SIZE_CONTENT);
+
+        wifiConnection = lv_label_create(connections);
+        lv_label_set_text(wifiConnection, LV_SYMBOL_WIFI);
+        lv_obj_add_flag(wifiConnection, LV_OBJ_FLAG_HIDDEN);lv_obj_set_style_pad_left(wifiConnection, 8, 0);   // padding sinistro
+        lv_obj_set_style_pad_right(wifiConnection, 8, 0);  // padding destro
+
         // Label batteria
         battery = lv_label_create(header);
         update();
@@ -137,8 +153,20 @@ public:
     }
 
     void loop() override {
-        if(lastUpdate == 0 || millis() - lastUpdate > 50000) {
+        RTC_DateTime datetime = rtc.getDateTime();
+        int seconds = datetime.second;
+
+        // Aggiorna all'inizio di ogni minuto
+        if (seconds == 0 && (lastUpdate == 0 || millis() - lastUpdate >= 1000)) {
             update();
+        }
+        if(WiFi.getMode() != WIFI_MODE_NULL && !wifiConnected) {
+            lv_obj_clear_flag(wifiConnection, LV_OBJ_FLAG_HIDDEN);
+            wifiConnected = true;
+        }
+        if(WiFi.getMode() == WIFI_MODE_NULL && wifiConnected) {
+            lv_obj_add_flag(wifiConnection, LV_OBJ_FLAG_HIDDEN);
+            wifiConnected = false;
         }
     }
 
