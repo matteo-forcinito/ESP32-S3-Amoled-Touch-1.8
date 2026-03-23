@@ -230,16 +230,13 @@ void setup() {
 void loop() {
   ScreenManager screenManager = ScreenManager::get();
   
+  RTC_DateTime datetime = rtc.getDateTime();
   if(isAlwaysOn) {
     alwaysOn();
     
-    int seconds = 0;
-    struct tm timeinfo;
-    if (getLocalTime(&timeinfo)) {
-      seconds = timeinfo.tm_sec;
-    }
+    int seconds = datetime.second;
     int sleepTime = 60 - seconds;
-    esp_sleep_enable_timer_wakeup(60 * 1000000ULL);
+    esp_sleep_enable_timer_wakeup(sleepTime * 1000000ULL);
     esp_sleep_enable_ext0_wakeup((gpio_num_t)0, 0);
     esp_light_sleep_start();
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
@@ -282,34 +279,55 @@ void loop() {
       gfx->fillScreen(BLACK);
       isAlwaysOn = true;
       //Wire.end();  // spegne I2C touch
-      //AudioManager::ampOff();
-      struct tm timeinfo;
-      if (getLocalTime(&timeinfo)) {
-        // Array per mesi e giorni in italiano
-        const char* mesi[] = {
-          "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-          "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
-        };
-        const char* giorni[] = {
-          "Domenica", "Lunedi", "Martedi", "Mercoledi",
-          "Giovedi", "Venerdi", "Sabato"
-        };
+      //AudioManager::ampOff();struct tm timeinfo;
 
-        // Ottieni i singoli campi
-        int giorno = timeinfo.tm_mday;
-        int mese = timeinfo.tm_mon;   // 0-11
-        int anno = timeinfo.tm_year + 1900;
-        int weekday = timeinfo.tm_wday; // 0=dom, 1=lun, ...
+      // Array per mesi e giorni in italiano
+      const char* mesi[] = {
+        "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+        "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+      };
 
-        // Prima riga: Mese Anno
-        gfx->setTextSize(3);
-        gfx->setCursor(40, 300);
-        gfx->printf("%s %d", mesi[mese], anno);
+      const char* giorni[] = {
+        "Domenica", "Lunedi", "Martedi", "Mercoledi",
+        "Giovedi", "Venerdi", "Sabato"
+      };
 
-        // Seconda riga: giorno, nome giorno
-        gfx->setCursor(40, 340);
-        gfx->printf("%d, %s", giorno, giorni[weekday]);
-      }
+      // Campi RTC
+      int giorno = datetime.day;
+      int mese = datetime.month - 1;   // ⚠️ RTC = 1-12 → array = 0-11
+      int anno = datetime.year;
+
+      // Costruisci struct tm con i dati RTC
+      struct tm t;
+      t.tm_year = anno - 1900;
+      t.tm_mon  = mese;
+      t.tm_mday = giorno;
+      t.tm_hour = datetime.hour;
+      t.tm_min  = datetime.minute;
+      t.tm_sec  = datetime.second;
+
+      // Calcola il weekday e timestamp locale
+      time_t ts = mktime(&t);  // calcola tm_wday
+
+      struct tm localTime;
+      localtime_r(&ts, &localTime);  // applica fuso orario del sistema
+
+      int weekday = localTime.tm_wday; // giorno della settimana corretto
+
+      // Prima riga: Mese Anno
+      gfx->setTextSize(3);
+      gfx->setCursor(40, 300);
+      gfx->printf("%s %d", mesi[mese], anno);
+
+      // Seconda riga: giorno, nome giorno
+      gfx->setCursor(40, 340);
+      gfx->printf("%d, %s", giorno, giorni[weekday]);
+
+      // Terza riga: ora locale
+      gfx->fillRect(40, 400, 200, 60, BLACK);
+      gfx->setTextSize(5);
+      gfx->setCursor(40, 400);
+      gfx->printf("%02d:%02d", localTime.tm_hour, localTime.tm_min);
 
       setCpuFrequencyMhz(80);
     }

@@ -64,20 +64,9 @@ public:
         // Label titolo
         
         timeLabel = lv_label_create(header);
-        struct tm timeinfo;
-        if (getLocalTime(&timeinfo)) {
-          lastUpdate = millis();
-          char timeString[6]; // "HH:MM" + terminatore null
-          strftime(timeString, sizeof(timeString), "%H:%M", &timeinfo);
-          lv_label_set_text(timeLabel, timeString);
-        } else {
-          lv_label_set_text(timeLabel, "App Launcher");
-        }
-
         // Label batteria
         battery = lv_label_create(header);
-        int batteryPercent = power.getBatteryPercent();
-        lv_label_set_text_fmt(battery, "%d%%", batteryPercent);
+        update();
         lv_obj_align(timeLabel, LV_ALIGN_TOP_MID, 0, 10);
 
         // ---- TITOLO ----
@@ -149,21 +138,24 @@ public:
 
     void loop() override {
         if(lastUpdate == 0 || millis() - lastUpdate > 50000) {
-
-            RTC_DateTime datetime = rtc.getDateTime();
-
-            lastUpdate = millis();
-
-            char timeString[6];
-            sprintf(timeString, "%02d:%02d",
-                    datetime.hour,
-                    datetime.minute);
-
-            lv_label_set_text(timeLabel, timeString);
-
-            int batteryPercent = power.getBatteryPercent();
-            lv_label_set_text_fmt(battery, "%d%%", batteryPercent);
+            update();
         }
+    }
+
+    void update() {
+        RTC_DateTime datetime = rtc.getDateTime();
+
+        lastUpdate = millis();
+
+        char timeString[6];
+        sprintf(timeString, "%02d:%02d",
+                datetime.hour,
+                datetime.minute);
+
+        lv_label_set_text(timeLabel, timeString);
+
+        int batteryPercent = power.getBatteryPercent();
+        lv_label_set_text_fmt(battery, "%d%%", batteryPercent);
     }
 
 private:
