@@ -1,7 +1,6 @@
 #pragma once
 #include "AppScreen.h"
 #include "WiFi.h"
-#include "TimeManager.h"
 #include "ScreenManager.h"
 #include <ctime>
 
@@ -125,7 +124,6 @@ public:
         Serial.printf("[SetTimeScreen] ✅ Nuovo orario impostato: %s", ctime(&newTime));
 
         // Salva su SD
-        TimeManager::saveTime();
 
         // Torna alla schermata principale
         backHome = true;

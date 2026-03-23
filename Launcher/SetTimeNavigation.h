@@ -1,7 +1,8 @@
 #pragma once
 #include "Navigation.h"
-
 #include "SetTimeScreen.h"
+
+extern SensorPCF85063 rtc;
 
 class SetTimeNavigation : public Navigation {
 public:
@@ -66,29 +67,35 @@ public:
 
   static void setTime() {
     Serial.print("Inizializzando l'ora..");
-    //Serial.println("WiFi connected");
-    
+
     configTime(0, 0, "pool.ntp.org");
     setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
     tzset();
-    
+
     struct tm timeinfo;
     unsigned long syncStart = millis();
-    // Aspetta fino a 10 secondi la sincronizzazione
-    while (!getLocalTime(&timeinfo) && millis() - syncStart < 1000) {
-      //Serial.println("Waiting for NTP sync...");
-      //delay(500);
+
+    while (!getLocalTime(&timeinfo) && millis() - syncStart < 10000) {
+        delay(100);
     }
 
     if (!getLocalTime(&timeinfo)) {
-          lv_obj_t *error = lv_msgbox_create(lv_layer_top(), "Attention", "Errore durante la configurazione!", NULL, true);
-          lv_obj_center(error);
-    } else {
-          lv_obj_t *success = lv_msgbox_create(lv_layer_top(), "Attention", "Ora configurata correttamente!", NULL, true);
-          lv_obj_center(success);
-      //Serial.printf("✅ Time set: %02d:%02d\n", timeinfo.tm_hour, timeinfo.tm_min);
-      //printMessage("Ora inizializzata");
-
+        lv_obj_t *error = lv_msgbox_create(lv_layer_top(), "Attention", "Errore durante la configurazione!", NULL, true);
+        lv_obj_center(error);
+        return;
     }
+
+    // ✅ Scrivi su RTC
+    rtc.setDateTime(
+        timeinfo.tm_year + 1900,
+        timeinfo.tm_mon + 1,
+        timeinfo.tm_mday,
+        timeinfo.tm_hour,
+        timeinfo.tm_min,
+        timeinfo.tm_sec
+    );
+
+    lv_obj_t *success = lv_msgbox_create(lv_layer_top(), "Attention", "Ora sincronizzata su RTC!", NULL, true);
+    lv_obj_center(success);
   }
 };

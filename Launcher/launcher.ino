@@ -8,6 +8,7 @@
 #include "esp_ota_ops.h"
 #include "esp_system.h"
 #include "XPowersLib.h"
+#include "SensorPCF85063.hpp"
 #include <esp_sleep.h>
 
 #include "SDManager.h"
@@ -18,7 +19,6 @@
 #include "lv_fs_sd.h"
 
 #include "HomeNavigation.h"
-#include "TimeManager.h"
 //#include "AudioManager.h"
 extern "C" {
   #include "driver/i2s_std.h"
@@ -60,6 +60,7 @@ void my_print(const char *buf) {
 SDManager sdManager;
 ScreenManager screenManager;
 XPowersPMU power;
+SensorPCF85063 rtc;
 bool isAlwaysOn = false;
 bool backHome = false;
 unsigned long bootPressedTime = 0;
@@ -119,14 +120,13 @@ void alwaysOn() {
   gfx->println(String(power.getBatteryPercent()) + "%");
 
 
-  struct tm timeinfo;
-  if (getLocalTime(&timeinfo)) {
-    gfx->fillRect(40, 400, 200, 60, BLACK);
-    // Terza riga: ora
-    gfx->setTextSize(5);
-    gfx->setCursor(40, 400);
-    gfx->printf("%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
-  }
+  RTC_DateTime datetime = rtc.getDateTime();
+  gfx->fillRect(40, 400, 200, 60, BLACK);
+  gfx->setTextSize(5);
+  gfx->setCursor(40, 400);
+  gfx->printf("%02d:%02d",
+              datetime.hour,
+              datetime.minute);
 
   // Se è in carica
   if (power.isCharging()) {
@@ -168,7 +168,17 @@ void setup() {
   } else {
     //USB//Serial.println("Power management ready");
   }
+  
+  if (!rtc.begin(Wire, PCF85063_SLAVE_ADDRESS, IIC_SDA, IIC_SCL)) {
+    //USBSerial.println("Failed to find PCF8563 - check your wiring!");
+    while (1) {
+      delay(1000);
+    }
+  }
 
+  configTime(0, 0, "pool.ntp.org");
+  setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
+  tzset();
 
   lv_init();
   lv_fs_sd_init();
@@ -178,8 +188,6 @@ void setup() {
   } else {
     Serial.println("Card Mounted");
   }
-
-  TimeManager::loadTime();
 
   #if LV_USE_LOG != 0
   lv_log_register_print_cb(my_print); /* register print function for debugging */

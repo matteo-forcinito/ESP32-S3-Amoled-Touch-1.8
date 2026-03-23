@@ -7,6 +7,7 @@
 
 #include "ControlCenterScreen.h"
 
+extern SensorPCF85063 rtc;
 extern XPowersPMU power; 
 extern SDManager sdManager;
 
@@ -147,17 +148,22 @@ public:
     }
 
     void loop() override {
-      if(lastUpdate == 0 || millis() - lastUpdate > 50000) {
-        struct tm timeinfo;
-        if (getLocalTime(&timeinfo)) {
-          lastUpdate = millis();
-          char timeString[6]; // "HH:MM" + terminatore null
-          strftime(timeString, sizeof(timeString), "%H:%M", &timeinfo);
-          lv_label_set_text(timeLabel, timeString);
-          int batteryPercent = power.getBatteryPercent();
-          lv_label_set_text_fmt(battery, "%d%%", batteryPercent);
+        if(lastUpdate == 0 || millis() - lastUpdate > 50000) {
+
+            RTC_DateTime datetime = rtc.getDateTime();
+
+            lastUpdate = millis();
+
+            char timeString[6];
+            sprintf(timeString, "%02d:%02d",
+                    datetime.hour,
+                    datetime.minute);
+
+            lv_label_set_text(timeLabel, timeString);
+
+            int batteryPercent = power.getBatteryPercent();
+            lv_label_set_text_fmt(battery, "%d%%", batteryPercent);
         }
-      }
     }
 
 private:
