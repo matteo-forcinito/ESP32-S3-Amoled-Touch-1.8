@@ -109,7 +109,6 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
 
 void alwaysOn() {
   //gfx->fillScreen(BLACK);
-  gfx->Display_Brightness(20);
 
   gfx->setTextColor(0x7BEF);
 
@@ -246,6 +245,7 @@ void loop() {
       //Wire.begin(IIC_SDA, IIC_SCL); // riattiva touch
       setCpuFrequencyMhz(240);
       isAlwaysOn = false;
+      gfx->Display_Brightness(brightness);
       delay(1000);
       // Forza LVGL a ridisegnare lo screen principale
       lv_obj_t *scr = lv_scr_act();
@@ -278,6 +278,7 @@ void loop() {
     } else {
       gfx->fillScreen(BLACK);
       isAlwaysOn = true;
+      gfx->Display_Brightness(20);
       //Wire.end();  // spegne I2C touch
       //AudioManager::ampOff();struct tm timeinfo;
 
