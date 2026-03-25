@@ -177,7 +177,7 @@ void returnToLauncher() {
 }
 
 void launcher() {
-  gfx->setCursor(50, 50);
+  gfx->setCursor(30, 50);
   gfx->setTextSize(2);
   gfx->setTextColor(0x7BEF);
   gfx->print("Click boot to enter AlwayOn");
@@ -191,7 +191,7 @@ void alwaysOn() {
   gfx->setTextColor(0x7BEF);
 
   // Mostra percentuale batteria
-   gfx->fillRect(100, 100, 200, 60, BLACK);
+  gfx->fillRect(100, 100, 200, 60, BLACK);
   gfx->setTextSize(5);
   gfx->setCursor(100, 100);
   gfx->println(String(power.getBatteryPercent()) + "%");
