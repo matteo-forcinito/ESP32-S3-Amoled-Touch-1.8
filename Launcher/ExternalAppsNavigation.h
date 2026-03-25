@@ -29,7 +29,7 @@ public:
 
                 if (strcmp(txt, "Si") == 0) {
                     Serial.printf("Apro l'app: %s\n", ctx->appName->c_str());
-                    ScreenManager::get().changeScreen(new AppInstallerScreen(ctx->appName->c_str()));
+                    ScreenManager::get().changeScreen(new AppInstallerScreen(*(ctx->appName)));
                 }
 
                 // pulizia

@@ -2,10 +2,12 @@
 #include "AppScreen.h"
 #include "SDManager.h"
 #include <Update.h>
+#include <lvgl.h>
+#include <SD_MMC.h>
 
 class AppInstallerScreen : public AppScreen {
 private:
-    const char *appName;
+    String appName;
     lv_obj_t *labelStatus;
     lv_obj_t *progressBar;
     lv_obj_t *icon;
@@ -13,23 +15,21 @@ private:
     bool appFound = false;
     bool isInstalling = false;
 
-    // Dati condivisi col task
     int currentProgress = 0;
     String currentStatus = "";
 
+    SemaphoreHandle_t sdMutex; // mutex per SD
+
 public:
-    AppInstallerScreen(const char *name) : appName(name) {
+    AppInstallerScreen(const String &name) : appName(name) {
         id = APP_INSTALLER;
+        sdMutex = xSemaphoreCreateMutex();
     }
 
     void onCreate() override {
-        // Layout principale
         lv_obj_set_style_bg_color(root, lv_color_black(), 0);
         lv_obj_set_flex_flow(root, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_flex_align(root,
-                              LV_FLEX_ALIGN_CENTER,
-                              LV_FLEX_ALIGN_CENTER,
-                              LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_flex_align(root, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
         // Titolo
         lv_obj_t *title = lv_label_create(root);
@@ -37,13 +37,13 @@ public:
         lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
         lv_obj_set_style_text_color(title, lv_color_white(), 0);
 
-        // Icona — prima tenta quella dell’app, poi placeholder
+        // Icona
         icon = lv_img_create(root);
         loadAppIcon();
 
         // Label di stato
         labelStatus = lv_label_create(root);
-        lv_label_set_text(labelStatus, "Ricerca app...");
+        lv_label_set_text(labelStatus, "Verifica SD...");
         lv_obj_set_style_text_color(labelStatus, lv_color_white(), 0);
 
         // Progress bar
@@ -52,86 +52,101 @@ public:
         lv_obj_add_flag(progressBar, LV_OBJ_FLAG_HIDDEN);
         lv_bar_set_range(progressBar, 0, 100);
 
-        // Avvio ricerca app
-        checkAppOnSD();
+        // Task di verifica app
+        xTaskCreatePinnedToCore(checkAppTaskStatic, "CheckApp", 4096, this, 1, NULL, 0);
     }
 
     void onDestroy() override {
-        // Pulizia eventuale (nessun handle da chiudere)
+        if (sdMutex) {
+            vSemaphoreDelete(sdMutex);
+            sdMutex = nullptr;
+        }
     }
 
 private:
-    // --- Verifica se l'app esiste su SD ---
-    void checkAppOnSD() {
-        String folder = String("/apps/") + appName;
-        String binPath = folder + "/" + appName + ".bin";
+    // --- Task statico ---
+    static void checkAppTaskStatic(void *param) {
+        AppInstallerScreen *self = (AppInstallerScreen*)param;
+        self->checkAppTask();
+        vTaskDelete(NULL);
+    }
 
-        if (!SD_MMC.exists(folder.c_str())) {
-            updateStatus("Cartella non trovata!");
-            appFound = false;
+    void checkAppTask() {
+        xSemaphoreTake(sdMutex, portMAX_DELAY);
+        if (!SD_MMC.begin()) {
+            updateStatus("Errore inizializzazione SD");
+            xSemaphoreGive(sdMutex);
+            return;
+        }
+        xSemaphoreGive(sdMutex);
+
+        String folder = "/apps/" + String(appName);
+        String binPath = folder + "/" + String(appName) + ".bin";
+
+        xSemaphoreTake(sdMutex, portMAX_DELAY);
+        bool folderExists = SD_MMC.exists(folder.c_str());
+        bool fileExists = SD_MMC.exists(binPath.c_str());
+        xSemaphoreGive(sdMutex);
+
+        if (!folderExists) {
+            updateStatus("Cartella non trovata");
             return;
         }
 
-        if (!SD_MMC.exists(binPath.c_str())) {
-            updateStatus("App non trovata!");
-            appFound = false;
+        if (!fileExists) {
+            updateStatus("File .bin non trovato");
             return;
         }
 
         appFound = true;
         updateStatus("App trovata. Avvio installazione...");
-        lv_obj_clear_flag(progressBar, LV_OBJ_FLAG_HIDDEN);
 
-        // Avvia task separato per installazione
-        xTaskCreatePinnedToCore(
-            installAppTaskStatic,
-            "InstallerTask",
-            8192,
-            this,
-            1,
-            NULL,
-            1 // Core 1 (stesso di LVGL)
-        );
+        lv_async_call([](void* p){
+            AppInstallerScreen *ctx = (AppInstallerScreen*)p;
+            lv_obj_clear_flag(ctx->progressBar, LV_OBJ_FLAG_HIDDEN);
+        }, this);
+
+        xTaskCreatePinnedToCore(installAppTaskStatic, "OTAInstall", 16384, this, 1, NULL, 0);
     }
 
-    // --- Caricamento icona ---
     void loadAppIcon() {
-        String iconPath = String("/apps/") + appName + "/icon.bin";
-
-        if (SD_MMC.exists(iconPath.c_str())) {
-            lv_img_set_src(icon, iconPath.c_str());
-        } else {
-            lv_img_set_src(icon, "S:/assets/icons/placeholder.bin");
+        String iconPath = "S:/apps/" + String(appName) + "/icon.bin";
+        xSemaphoreTake(sdMutex, portMAX_DELAY);
+        if (!SD_MMC.exists(iconPath.substring(2).c_str())) {
+            iconPath = "S:/assets/icons/placeholder.bin"; // fallback
         }
+        xSemaphoreGive(sdMutex);
 
+        lv_img_set_src(icon, iconPath.c_str());
         lv_obj_set_size(icon, 64, 64);
     }
 
-    // --- Task wrapper ---
     static void installAppTaskStatic(void *param) {
-        AppInstallerScreen *self = static_cast<AppInstallerScreen *>(param);
+        AppInstallerScreen *self = (AppInstallerScreen*)param;
         self->installAppTask();
         vTaskDelete(NULL);
     }
 
-    // --- Funzione OTA vera e propria ---
     void installAppTask() {
-        if (!appFound || isInstalling)
-            return;
-
+        if (!appFound || isInstalling) return;
         isInstalling = true;
 
-        String binPath = String("/apps/") + appName + "/" + appName + ".bin";
-        File f = SD_MMC.open(binPath.c_str());
+        String binPath = "/apps/" + String(appName) + "/" + String(appName) + ".bin";
+        File f;
+
+        xSemaphoreTake(sdMutex, portMAX_DELAY);
+        f = SD_MMC.open(binPath.c_str());
+        xSemaphoreGive(sdMutex);
+
         if (!f) {
-            updateStatus("Errore apertura file!");
+            updateStatus("Errore apertura file");
             isInstalling = false;
             return;
         }
 
         size_t size = f.size();
         if (!Update.begin(size)) {
-            updateStatus("Update.begin fallito!");
+            updateStatus("Update.begin fallito");
             f.close();
             isInstalling = false;
             return;
@@ -139,11 +154,12 @@ private:
 
         uint8_t buf[1024];
         size_t written = 0;
+        int lastProgress = -1;
 
         while (f.available()) {
             size_t r = f.read(buf, sizeof(buf));
             if (Update.write(buf, r) != r) {
-                updateStatus("Errore scrittura OTA!");
+                updateStatus("Errore scrittura OTA");
                 Update.end();
                 f.close();
                 isInstalling = false;
@@ -152,19 +168,22 @@ private:
 
             written += r;
             int progress = (written * 100) / size;
-            currentProgress = progress;
-            currentStatus = "Installazione " + String(written / 1024) + "KB / " + String(size / 1024) + "KB";
+            if (progress != lastProgress && progress % 5 == 0) {
+                lastProgress = progress;
+                currentProgress = progress;
+                currentStatus = "Installazione " + String(written/1024) + "KB / " + String(size/1024) + "KB";
+                lv_async_call([](void* p){
+                    AppInstallerScreen *ctx = (AppInstallerScreen*)p;
+                    lv_bar_set_value(ctx->progressBar, ctx->currentProgress, LV_ANIM_OFF);
+                    lv_label_set_text(ctx->labelStatus, ctx->currentStatus.c_str());
+                }, this);
+            }
 
-            // Aggiorna la UI in modo thread-safe
-            lv_async_call([](void *p) {
-                AppInstallerScreen *ctx = (AppInstallerScreen *)p;
-                lv_bar_set_value(ctx->progressBar, ctx->currentProgress, LV_ANIM_OFF);
-                lv_label_set_text(ctx->labelStatus, ctx->currentStatus.c_str());
-            }, this);
+            vTaskDelay(1);
         }
 
         if (!Update.end(true)) {
-            updateStatus("Errore al termine OTA!");
+            updateStatus("Errore completamento OTA");
             f.close();
             isInstalling = false;
             return;
@@ -172,23 +191,21 @@ private:
 
         f.close();
         currentProgress = 100;
-        updateStatus("Installazione completata! Riavvio...");
-
-        lv_async_call([](void *p) {
-            AppInstallerScreen *ctx = (AppInstallerScreen *)p;
+        currentStatus = "Installazione completata! Riavvio...";
+        lv_async_call([](void* p){
+            AppInstallerScreen *ctx = (AppInstallerScreen*)p;
             lv_bar_set_value(ctx->progressBar, 100, LV_ANIM_OFF);
             lv_label_set_text(ctx->labelStatus, ctx->currentStatus.c_str());
         }, this);
 
-        delay(700);
+        vTaskDelay(pdMS_TO_TICKS(700));
         esp_restart();
     }
 
-    // --- Utility per aggiornare testo in sicurezza ---
     void updateStatus(const String &msg) {
         currentStatus = msg;
-        lv_async_call([](void *p) {
-            AppInstallerScreen *ctx = (AppInstallerScreen *)p;
+        lv_async_call([](void* p){
+            AppInstallerScreen *ctx = (AppInstallerScreen*)p;
             lv_label_set_text(ctx->labelStatus, ctx->currentStatus.c_str());
         }, this);
     }

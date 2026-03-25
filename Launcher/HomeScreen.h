@@ -327,7 +327,7 @@ static void cb_openApp(lv_event_t *e) {
         const char *txt = lv_msgbox_get_active_btn_text(ctx->mbox);
         if (txt && strcmp(txt, "Si") == 0) {
             Serial.printf("[HomeScreen] 🚀 Avvio app %s\n", ctx->name->c_str());
-            ScreenManager::get().changeScreen(new AppInstallerScreen(ctx->name->c_str()));
+            ScreenManager::get().changeScreen(new AppInstallerScreen(*(ctx->name)));
         }
 
         // cleanup
@@ -528,7 +528,7 @@ lv_obj_add_event_cb(cont, [](lv_event_t * e) {
 
             if (strcmp(txt, "Si") == 0) {
                 Serial.printf("Apro l'app: %s\n", ctx->appName->c_str());
-                ScreenManager::get().changeScreen(new AppInstallerScreen(ctx->appName->c_str()));
+                ScreenManager::get().changeScreen(new AppInstallerScreen(*(ctx->appName)));
             }
 
             // pulizia
@@ -553,7 +553,7 @@ static void mbox_event_handler(lv_event_t* e2) {
     Serial.println("mbox_event_handler::got btn text");
     if (btnTxt && strcmp(btnTxt, "Si") == 0) {
         Serial.println("Apro l'app: " + *appName);
-        ScreenManager::get().changeScreen(new AppInstallerScreen(appName->c_str()));
+        ScreenManager::get().changeScreen(new AppInstallerScreen(*(appName)));
     }
 }
 
