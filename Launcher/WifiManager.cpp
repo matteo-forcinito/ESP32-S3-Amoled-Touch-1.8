@@ -140,6 +140,57 @@ std::vector<WifiNetwork> WifiManager::loadSavedNetworks(const char* path) {
     return savedNetworks;
 }
 
+bool WifiManager::saveNetwork(const char* path, const String& ssid, const String& pwd) {
+    SDManager sdManager;
+    std::vector<WifiNetwork> networks = loadSavedNetworks(path);
+
+    // Aggiorna se già presente
+    bool found = false;
+    for (auto& net : networks) {
+        if (net.ssid == ssid) {
+            net.pwd = pwd;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        WifiNetwork newNet;
+        newNet.ssid = ssid;
+        newNet.pwd = pwd;
+        newNet.saved = true;
+        newNet.connected = false;
+        networks.push_back(newNet);
+    }
+
+    // Prepara JSON
+    DynamicJsonDocument doc(1024 + networks.size() * 128);
+    JsonArray arr = doc.to<JsonArray>();
+    for (auto& net : networks) {
+        JsonObject obj = arr.createNestedObject();
+        obj["ssid"] = net.ssid;
+        obj["pwd"]  = net.pwd;
+    }
+
+    // Rimuovi file esistente (compatibile con ESP32)
+    if(SD_MMC.exists(path)) {
+        SD_MMC.remove(path);
+    }
+    //sdManager.remove(path);
+
+    File file = SD_MMC.open(path, FILE_WRITE); // nuovo file
+    if (!file) {
+        Serial.println("Errore apertura file");
+        return false;
+    }
+
+    serializeJson(doc, file);
+    file.close();
+
+    Serial.println("Rete salvata correttamente");
+    return true;
+}
+
 WifiNetwork WifiManager::getConnected() {
     if(WiFi.status() == WL_CONNECTED) {
         for(auto &network : networks) {

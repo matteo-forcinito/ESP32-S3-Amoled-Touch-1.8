@@ -36,6 +36,7 @@ public:
     static std::vector<WifiNetwork> savedNetworks;
     
     static std::vector<WifiNetwork> loadSavedNetworks(const char* path);
+    static bool saveNetwork(const char* path, const String& ssid, const String& pwd);
 private:
     static void scanTask(void* param);
 
