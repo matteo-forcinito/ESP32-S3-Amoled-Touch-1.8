@@ -1,8 +1,13 @@
 #pragma once
 #include <WiFi.h>
+#include "HWCDC.h"
 #include <vector>
 #include "Utils.h"
 #include "SDManager.h"
+
+extern HWCDC USBSerial;
+
+extern SDManager sdManager;
 
 class WifiManager {
 public:

@@ -225,7 +225,7 @@ public:
 
       if (WiFi.status() == WL_CONNECTED) {
           WifiManager wm;
-          if(wm.saveNetwork("/wifi.json", ssid, pwd)) {
+          if(wm.saveNetwork("/networks.json", ssid, pwd)) {
             server.send(200, "text/html", "<h1>Salvata!</h1>");
           } else {
             server.send(200, "text/html", "<h1>Errore nel salvataggio!</h1>");

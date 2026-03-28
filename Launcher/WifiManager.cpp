@@ -95,13 +95,18 @@ const std::vector<WifiNetwork>& WifiManager::getNetworks() {
     return networks;
 }
 
+#include "WifiManager.h"
+#include "SDManager.h"
+#include <ArduinoJson.h>
+
+// ---------------------- LOAD SAVED NETWORKS ----------------------
 std::vector<WifiNetwork> WifiManager::loadSavedNetworks(const char* path) {
     std::vector<WifiNetwork> savedNetworks;
 
     SDManager sdManager;
     File file = sdManager.open(path);
-    if(!file) {
-        //USBSerial.println("File non trovato");
+    if (!file || !file.available()) {
+        Serial.println("[WifiManager] File non trovato o vuoto");
         return savedNetworks;
     }
 
@@ -112,41 +117,39 @@ std::vector<WifiNetwork> WifiManager::loadSavedNetworks(const char* path) {
     }
     file.close();
 
-    // Analizza il JSON
-    DynamicJsonDocument doc(1024); // dimensione buffer: regola se serve più grande
+    // JSON: array di oggetti
+    DynamicJsonDocument doc(2048); // aumenta se servono più reti
     DeserializationError error = deserializeJson(doc, jsonStr);
-
-    if(error) {
-        //USBSerial("Errore parsing JSON: ");
-        //USBSerial.println(error.c_str());
+    if (error) {
+        Serial.print("[WifiManager] Errore parsing JSON: ");
+        Serial.println(error.c_str());
         return savedNetworks;
     }
 
-    // JSON come array
-    for(JsonObject obj : doc.as<JsonArray>()) {
+    JsonArray arr = doc.as<JsonArray>();
+    for (JsonObject obj : arr) {
         WifiNetwork net;
-        net.ssid = obj["ssid"].as<String>();
-        net.pwd  = obj["pwd"].as<String>();
-        net.saved = true;
+        net.ssid      = obj["ssid"].as<String>();
+        net.pwd       = obj["pwd"].as<String>();
+        net.saved     = true;
         net.connected = false;
         savedNetworks.push_back(net);
 
-        //USBSerial("SSID: ");
-        //USBSerial.println(net.ssid.c_str());
-        //USBSerial("PWD: ");
-        //USBSerial.println(net.pwd.c_str());
+        Serial.print("[WifiManager] Trovata rete salvata: ");
+        Serial.println(net.ssid);
     }
 
     return savedNetworks;
 }
 
+// ---------------------- SAVE NETWORK ----------------------
 bool WifiManager::saveNetwork(const char* path, const String& ssid, const String& pwd) {
     SDManager sdManager;
     std::vector<WifiNetwork> networks = loadSavedNetworks(path);
 
     // Aggiorna se già presente
     bool found = false;
-    for (auto& net : networks) {
+    for (auto &net : networks) {
         if (net.ssid == ssid) {
             net.pwd = pwd;
             found = true;
@@ -155,39 +158,41 @@ bool WifiManager::saveNetwork(const char* path, const String& ssid, const String
     }
 
     if (!found) {
+        USBSerial.println("no wifi found, creating a new one");
         WifiNetwork newNet;
-        newNet.ssid = ssid;
-        newNet.pwd = pwd;
-        newNet.saved = true;
+        newNet.ssid      = ssid;
+        newNet.pwd       = pwd;
+        newNet.saved     = true;
         newNet.connected = false;
         networks.push_back(newNet);
     }
 
+
+    USBSerial.println("parsing json..");
     // Prepara JSON
-    DynamicJsonDocument doc(1024 + networks.size() * 128);
+    DynamicJsonDocument doc(2048 + networks.size() * 128);
     JsonArray arr = doc.to<JsonArray>();
-    for (auto& net : networks) {
+    for (auto &net : networks) {
         JsonObject obj = arr.createNestedObject();
         obj["ssid"] = net.ssid;
         obj["pwd"]  = net.pwd;
     }
 
-    // Rimuovi file esistente (compatibile con ESP32)
-    if(SD_MMC.exists(path)) {
-        SD_MMC.remove(path);
-    }
-    //sdManager.remove(path);
-
-    File file = SD_MMC.open(path, FILE_WRITE); // nuovo file
+    USBSerial.println("opening file..");
+    // Scrive su SD
+    File file = SD_MMC.open(path, FILE_WRITE); // crea/sovrascrive
     if (!file) {
-        //USBSerial.println("Errore apertura file");
+        USBSerial.println("[WifiManager] Errore apertura file per scrittura!");
         return false;
     }
 
+    USBSerial.println("serializing..");
     serializeJson(doc, file);
     file.close();
 
-    //USBSerial.println("Rete salvata correttamente");
+    USBSerial.print("[WifiManager] Rete salvata correttamente: ");
+    USBSerial.println(ssid);
+
     return true;
 }
 

@@ -78,13 +78,6 @@ public:
             });
         });
 
-
-        appsList.emplace_back("moOde", "S:/assets/icons/moOde.bin", [](lv_event_t *e) {
-            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
-                ScreenManager::get().changeScreen(new MoodeScreen());
-            });
-        });
-
         appsList.emplace_back("Wifi Quality", "S:/assets/icons/wifi.bin", [](lv_event_t *e) {
             SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
                 ScreenManager::get().changeScreen(new WifiQualityScreen());
@@ -100,6 +93,12 @@ public:
         appsList.emplace_back("USB MSC", "S:/assets/icons/usb.bin", [](lv_event_t *e) {
             SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
                 ScreenManager::get().changeScreen(new USBMSCScreen());
+            });
+        });
+
+        appsList.emplace_back("moOde", "S:/assets/icons/moOde.bin", [](lv_event_t *e) {
+            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
+                ScreenManager::get().changeScreen(new MoodeScreen());
             });
         });
 
