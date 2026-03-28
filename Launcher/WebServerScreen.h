@@ -210,30 +210,28 @@ public:
   });
 
   // POST: salva
-  server.on("/saveNetwork", HTTP_POST, [this]() {
-      if (!isLoggedIn()) return server.requestAuthentication();
+    server.on("/saveNetwork", HTTP_POST, [this]() {
+        if (!isLoggedIn()) return server.requestAuthentication();
 
-      String ssid = server.arg("ssid");
-      String pwd  = server.arg("pwd");
+        String ssid = server.arg("ssid");
+        String pwd  = server.arg("pwd");
 
-      // Test di connessione veloce
-      WiFi.begin(ssid.c_str(), pwd.c_str());
-      unsigned long start = millis();
-      while (WiFi.status() != WL_CONNECTED && millis() - start < 5000) {
-          delay(100);
-      }
+        // Salva subito la rete
+        WifiManager wm;
+        bool ok = wm.saveNetwork("/networks.json", ssid, pwd);
 
-      if (WiFi.status() == WL_CONNECTED) {
-          WifiManager wm;
-          if(wm.saveNetwork("/networks.json", ssid, pwd)) {
-            server.send(200, "text/html", "<h1>Salvata!</h1>");
-          } else {
-            server.send(200, "text/html", "<h1>Errore nel salvataggio!</h1>");
-          }
-      } else {
-          server.send(200, "text/html", "<h1>Errore di connessione!</h1>");
-      }
-  });
+        // Risposta immediata al client
+        String page = "<h1>";
+        page += ok ? "Rete salvata correttamente!" : "Errore nel salvataggio!";
+        page += "</h1>";
+        page += "<p>SSID: " + ssid + "</p>";
+        page += "<a href='/'>Torna alla home</a>";
+
+        server.send(200, "text/html", page);
+
+        // Poi collega la rete in background senza bloccare
+        wm.connect(ssid, pwd); // aggiorna lo stato interno, il loop del dispositivo si occuperà di connettersi
+    });
 
     server.begin();
     serverStarted = true;
