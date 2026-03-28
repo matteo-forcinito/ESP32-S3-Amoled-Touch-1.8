@@ -9,6 +9,9 @@
 #include "SensorPCF85063.hpp"
 #include "XPowersLib.h"
 #include <esp_sleep.h>
+#include "AlwaysOnScreen.h"
+#include "LauncherScreen.h"
+#include "SimpleScreen.h"
 
 // --- Display (SH8601 QSPI) ---
 Arduino_DataBus *bus = new Arduino_ESP32QSPI(
@@ -23,6 +26,11 @@ SensorPCF85063 rtc;
 XPowersPMU power;
 bool isAlwaysOn = false;
 unsigned long bootTime = 0;
+SimpleScreen* openApp = nullptr;
+AlwaysOnScreen alwaysOnScreen;
+LauncherScreen *launcher = new LauncherScreen();
+bool enableAlwaysOn = false;
+bool backToLaucher = false;
 
 // --- SETUP ---
 void setup() {
@@ -57,16 +65,29 @@ void setup() {
   configTime(0, 0, "pool.ntp.org");
   setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
   tzset();
-
-  launcher();
+  
+  gfx->setTextColor(0x03E0); // 0x0320  0x03E0  0x0200
+  
+  launcher->create();
 
 }
 
 // --- LOOP ---
 void loop() {
+  if(backToLaucher) {
+    backToLaucher = false;
+    gfx->fillScreen(BLACK);
+    gfx->setCursor(50, 180);
+    gfx->setTextSize(3);
+    gfx->print("Restarting..");
+    delay(500);
+    returnToLauncher();
+
+    return;
+  }
   RTC_DateTime datetime = rtc.getDateTime();
   if(isAlwaysOn) {
-    alwaysOn();
+    alwaysOnScreen.alwaysOn();
     
     int seconds = datetime.second;
     int sleepTime = 60 - seconds;
@@ -82,7 +103,7 @@ void loop() {
       isAlwaysOn = false;
       gfx->Display_Brightness(140);
       delay(1000);
-      launcher();
+      alwaysOnScreen.create();
       //AudioManager::ampOn();
 
       return;
@@ -97,62 +118,33 @@ void loop() {
     }
   }
   if(digitalRead(0) == HIGH && bootTime != 0) {
-    gfx->fillScreen(BLACK);
-    isAlwaysOn = true;
-    gfx->Display_Brightness(20);
-    //Wire.end();  // spegne I2C touch
-    //AudioManager::ampOff();struct tm timeinfo;
-
-    // Array per mesi e giorni in italiano
-    const char* mesi[] = {
-      "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-      "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
-    };
-
-    const char* giorni[] = {
-      "Domenica", "Lunedi", "Martedi", "Mercoledi",
-      "Giovedi", "Venerdi", "Sabato"
-    };
-
-    // Campi RTC
-    int giorno = datetime.day;
-    int mese = datetime.month - 1;   // ⚠️ RTC = 1-12 → array = 0-11
-    int anno = datetime.year;
-
-    // Costruisci struct tm con i dati RTC
-    struct tm t;
-    t.tm_year = anno - 1900;
-    t.tm_mon  = mese;
-    t.tm_mday = giorno;
-    t.tm_hour = datetime.hour;
-    t.tm_min  = datetime.minute;
-    t.tm_sec  = datetime.second;
-
-    // Calcola il weekday e timestamp locale
-    time_t ts = mktime(&t);  // calcola tm_wday
-
-    struct tm localTime;
-    localtime_r(&ts, &localTime);  // applica fuso orario del sistema
-
-    int weekday = localTime.tm_wday; // giorno della settimana corretto
-
-    // Prima riga: Mese Anno
-    gfx->setTextSize(3);
-    gfx->setCursor(40, 300);
-    gfx->printf("%s %d", mesi[mese], anno);
-
-    // Seconda riga: giorno, nome giorno
-    gfx->setCursor(40, 340);
-    gfx->printf("%d, %s", giorno, giorni[weekday]);
-
-    // Terza riga: ora locale
-    gfx->fillRect(40, 400, 200, 60, BLACK);
-    gfx->setTextSize(5);
-    gfx->setCursor(40, 400);
-    gfx->printf("%02d:%02d", localTime.tm_hour, localTime.tm_min);
-
-    setCpuFrequencyMhz(80);
+    if(openApp != nullptr) {
+      delete openApp;
+      openApp = nullptr;
+    }
+    delete launcher;
+    launcher = new LauncherScreen();
+    launcher->create();
     bootTime = 0;
+  }
+  if(enableAlwaysOn) {
+    enableAlwaysOn = false;
+    isAlwaysOn = true;
+    gfx->fillScreen(BLACK);
+    gfx->Display_Brightness(20);
+    alwaysOnScreen.alwaysOn();
+    setCpuFrequencyMhz(80);
+  }
+  
+  int32_t x = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::TOUCH_COORDINATE_X);
+  int32_t y = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::TOUCH_COORDINATE_Y);
+  int32_t fingers = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::Value_Information::TOUCH_FINGER_NUMBER);
+  //alwaysOnScreen.touch(x, y, fingers);
+  if(openApp != nullptr) {
+    openApp->loop();
+    openApp->touch(x, y, fingers);
+  } else {
+    launcher->touch(x, y, fingers);
   }
 }
 
@@ -174,42 +166,4 @@ void returnToLauncher() {
     Serial.println("Riavvio per tornare al launcher...");
     delay(500);
     esp_restart();  // Riavvia ESP32, partirà dal launcher
-}
-
-void launcher() {
-  gfx->setCursor(30, 50);
-  gfx->setTextSize(2);
-  gfx->setTextColor(0x7BEF);
-  gfx->print("Click boot to enter AlwayOn");
-
-  alwaysOn();
-}
-
-void alwaysOn() {
-  //gfx->fillScreen(BLACK);
-
-  gfx->setTextColor(0x7BEF);
-
-  // Mostra percentuale batteria
-  gfx->fillRect(100, 100, 200, 60, BLACK);
-  gfx->setTextSize(5);
-  gfx->setCursor(100, 100);
-  gfx->println(String(power.getBatteryPercent()) + "%");
-
-
-  RTC_DateTime datetime = rtc.getDateTime();
-  gfx->fillRect(40, 400, 200, 60, BLACK);
-  gfx->setTextSize(5);
-  gfx->setCursor(40, 400);
-  gfx->printf("%02d:%02d",
-              datetime.hour,
-              datetime.minute);
-
-  // Se è in carica
-  if (power.isCharging()) {
-    gfx->fillRect(100, 200, 200, 60, BLACK);
-    gfx->setTextSize(2);
-    gfx->setCursor(100, 200);
-    gfx->println("Charging");
-  }
 }
