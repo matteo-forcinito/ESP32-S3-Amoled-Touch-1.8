@@ -45,21 +45,37 @@ public:
   }
 
   void onGesture(Gesture g) {
-    if(imu.isEnabled() && (g == Gesture::UP || g == Gesture::DOWN)) {
-      ready = false;
-      gfx->fillScreen(BLACK);
-      gfx->setTextSize(2);
-      gfx->print("calibrating.. keep device still");
-      delay(2500);
-      //imu.calibrateGyro();
-      IMUdata acc = imu.getAccel();
-      offsetX = acc.x;
-      offsetY = acc.y;
-      gfx->fillScreen(BLACK);
-      
-      drawLines();
+    if(imu.isEnabled()) {
+      if(g == Gesture::UP || g == Gesture::DOWN) {
+        ready = false;
+        gfx->fillScreen(BLACK);
+        gfx->setTextSize(2);
+        gfx->print("calibrating.. keep device still");
+        delay(2500);
+        //imu.calibrateGyro();
+        IMUdata acc = imu.getAccel();
+        offsetX = acc.x;
+        offsetY = acc.y;
+        gfx->fillScreen(BLACK);
+        
+        drawLines();
 
-      ready = true;
+        ready = true;
+      } else {
+        ready = false;
+        gfx->fillScreen(BLACK);
+        gfx->setTextSize(2);
+        gfx->print("resetting.. keep device still");
+        delay(2500);
+        //imu.calibrateGyro();
+        offsetX = 0;
+        offsetY = 0;
+        gfx->fillScreen(BLACK);
+        
+        drawLines();
+
+        ready = true;
+      }
     }
   }
 
