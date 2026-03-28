@@ -48,6 +48,11 @@ public:
         std::vector<MenuItem> appsList;
 
         std::vector<FileEntry> files = sdManager.listFolder(path.c_str());
+        std::sort(files.begin(), files.end(), [](const FileEntry &a, const FileEntry &b) {
+            if (a.isDirectory && !b.isDirectory) return true;   // directory prima
+            if (!a.isDirectory && b.isDirectory) return false; // file dopo
+            return a.name < b.name;                            // ordine alfabetico
+        });
 
         if(path != "/") {
           // Ricava path padre
