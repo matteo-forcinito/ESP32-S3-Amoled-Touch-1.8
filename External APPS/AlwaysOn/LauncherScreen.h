@@ -3,6 +3,7 @@
 #include "HelloWorldScreen.h"
 #include "FlashScreen.h"
 #include "SettingsScreen.h"
+#include "QMIScreen.h"
 
 struct AppItem {
   const char* name;
@@ -13,9 +14,11 @@ SimpleScreen* createClock() { return new AlwaysOnScreen(); }
 SimpleScreen* createHelloWorld() { return new HelloWorldScreen(); }
 SimpleScreen* createFlash() { return new FlashScreen(); }
 SimpleScreen* createSettings() { return new SettingsScreen(); }
+SimpleScreen* createQMI() { return new QMIScreen(); }
 
 AppItem apps[] = {
   { "Clock", createClock },
+  { "QMI", createQMI },
   { "Hello World", createHelloWorld },
   { "Flash", createFlash },
   { "Settings", createSettings }

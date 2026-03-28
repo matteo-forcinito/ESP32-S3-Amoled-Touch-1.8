@@ -19,7 +19,7 @@ public:
     DOWN
   };
   SimpleScreen() {}
-  virtual ~SimpleScreen() {}
+  virtual ~SimpleScreen() { onDestroy(); }
 
   virtual void onCreate() = 0;
   virtual void create() { gfx->fillScreen(BLACK); onCreate(); }
@@ -54,4 +54,5 @@ public:
   }
   virtual void onTouch(int32_t x, int32_t y, int32_t fingers) {}
   virtual void onGesture(Gesture gesture) {}
+  virtual void onDestroy() {}
 };
