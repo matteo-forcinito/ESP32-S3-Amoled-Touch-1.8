@@ -101,7 +101,7 @@ std::vector<WifiNetwork> WifiManager::loadSavedNetworks(const char* path) {
     SDManager sdManager;
     File file = sdManager.open(path);
     if(!file) {
-        Serial.println("File non trovato");
+        //USBSerial.println("File non trovato");
         return savedNetworks;
     }
 
@@ -117,8 +117,8 @@ std::vector<WifiNetwork> WifiManager::loadSavedNetworks(const char* path) {
     DeserializationError error = deserializeJson(doc, jsonStr);
 
     if(error) {
-        Serial.print("Errore parsing JSON: ");
-        Serial.println(error.c_str());
+        //USBSerial("Errore parsing JSON: ");
+        //USBSerial.println(error.c_str());
         return savedNetworks;
     }
 
@@ -131,10 +131,10 @@ std::vector<WifiNetwork> WifiManager::loadSavedNetworks(const char* path) {
         net.connected = false;
         savedNetworks.push_back(net);
 
-        Serial.print("SSID: ");
-        Serial.println(net.ssid.c_str());
-        Serial.print("PWD: ");
-        Serial.println(net.pwd.c_str());
+        //USBSerial("SSID: ");
+        //USBSerial.println(net.ssid.c_str());
+        //USBSerial("PWD: ");
+        //USBSerial.println(net.pwd.c_str());
     }
 
     return savedNetworks;
@@ -180,14 +180,14 @@ bool WifiManager::saveNetwork(const char* path, const String& ssid, const String
 
     File file = SD_MMC.open(path, FILE_WRITE); // nuovo file
     if (!file) {
-        Serial.println("Errore apertura file");
+        //USBSerial.println("Errore apertura file");
         return false;
     }
 
     serializeJson(doc, file);
     file.close();
 
-    Serial.println("Rete salvata correttamente");
+    //USBSerial.println("Rete salvata correttamente");
     return true;
 }
 

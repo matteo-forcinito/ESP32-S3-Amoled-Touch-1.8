@@ -2,19 +2,19 @@
 
 bool TimeManager::loadTime() {
     if (!SD_MMC.begin("/sdcard", true)) {
-        Serial.println("[TimeManager] ❌ SD non disponibile");
+        //USBSerial.println("[TimeManager] ❌ SD non disponibile");
         return false;
     }
 
     if (!SD_MMC.exists(TIME_FILE)) {
-        Serial.println("[TimeManager] ⚠️ Nessun file tempo trovato, uso fallback");
+        //USBSerial.println("[TimeManager] ⚠️ Nessun file tempo trovato, uso fallback");
         setFallbackTime();
         return false;
     }
 
     File file = SD_MMC.open(TIME_FILE, FILE_READ);
     if (!file) {
-        Serial.println("[TimeManager] ❌ Impossibile aprire file tempo");
+        //USBSerial.println("[TimeManager] ❌ Impossibile aprire file tempo");
         setFallbackTime();
         return false;
     }
@@ -26,14 +26,14 @@ bool TimeManager::loadTime() {
     struct timeval now = { .tv_sec = savedTime };
     settimeofday(&now, nullptr);
 
-    Serial.printf("[TimeManager] 🕒 Tempo ripristinato da SD: %s", ctime(&savedTime));
+    //USBSerial.printf("[TimeManager] 🕒 Tempo ripristinato da SD: %s", ctime(&savedTime));
     return true;
 }
 
 void TimeManager::saveTime() {
     struct tm timeinfo;
     if (!getLocalTime(&timeinfo)) {
-        Serial.println("[TimeManager] ⚠️ Impossibile leggere orario attuale, non salvo");
+        //USBSerial.println("[TimeManager] ⚠️ Impossibile leggere orario attuale, non salvo");
         return;
     }
 
@@ -42,13 +42,13 @@ void TimeManager::saveTime() {
 
     File file = SD_MMC.open(TIME_FILE, FILE_WRITE);
     if (!file) {
-        Serial.println("[TimeManager] ❌ Impossibile aprire file tempo per scrittura");
+        //USBSerial.println("[TimeManager] ❌ Impossibile aprire file tempo per scrittura");
         return;
     }
 
     file.write((uint8_t*)&now, sizeof(now));
     file.close();
-    Serial.printf("[TimeManager] 💾 Tempo salvato: %s", ctime(&now));
+    //USBSerial.printf("[TimeManager] 💾 Tempo salvato: %s", ctime(&now));
 }
 
 void TimeManager::setFallbackTime() {
@@ -63,5 +63,5 @@ void TimeManager::setFallbackTime() {
     struct timeval now = { .tv_sec = fallback };
     settimeofday(&now, nullptr);
 
-    Serial.printf("[TimeManager] ⏰ Impostato tempo di fallback: %s", ctime(&fallback));
+    //USBSerial.printf("[TimeManager] ⏰ Impostato tempo di fallback: %s", ctime(&fallback));
 }

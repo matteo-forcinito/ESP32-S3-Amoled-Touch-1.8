@@ -170,6 +170,15 @@ public:
         }
     }
 
+    void onDestroy() override {
+        for (auto &item : items) {
+            if (item.userData) {
+                free(item.userData);
+                item.userData = nullptr;
+            }
+        }
+    }
+
     void update() {
         RTC_DateTime datetime = rtc.getDateTime();
 
@@ -236,11 +245,14 @@ private:
             lv_obj_set_flex_align(btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
             if (item.callback) {
-              String *nameCopy = new String(item.name); // <-- memoria valida finché non la delete
-              lv_obj_add_event_cb(btn, item.callback, LV_EVENT_CLICKED, nameCopy);
+                if(item.userData != nullptr) {
+                    lv_obj_add_event_cb(btn, item.callback, LV_EVENT_CLICKED, item.userData);
+                } else {
+                    lv_obj_add_event_cb(btn, item.callback, LV_EVENT_CLICKED, new String(item.name));
+                }
             }
             lv_obj_t *icon;
-            Serial.printf("[PaginatorScreen] icona: %s\n", item.icon);
+            //USBSerial.printf("[PaginatorScreen] icona: %s\n", item.icon);
             if (strncmp(item.icon.c_str(), "S:", 2) == 0) {
                 // --- È un'immagine ---
                 String iconPath = "S:/assets/icons/placeholder.bin";

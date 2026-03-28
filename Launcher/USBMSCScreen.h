@@ -74,17 +74,17 @@ bool msc_start_stop(uint8_t power_condition, bool start, bool load_eject) {
 class USBMSCScreen : public AppScreen {
 public:
     void onCreate() override {
-        Serial.println("[USBMSC] Init...");
+        //USBSerial.println("[USBMSC] Init...");
 
         if (!SD_MMC.begin()) {
-            Serial.println("[USBMSC] ❌ SD init failed");
+            //USBSerial.println("[USBMSC] ❌ SD init failed");
             return;
         }
 
         uint32_t cardSize = SD_MMC.cardSize(); // bytes
         uint32_t blockCount = cardSize / BLOCK_SIZE;
 
-        Serial.printf("[USBMSC] Size: %u blocks\n", blockCount);
+        //USBSerial.printf("[USBMSC] Size: %u blocks\n", blockCount);
 
         USB.begin();
 
@@ -94,7 +94,7 @@ public:
 
         usb_msc.begin(blockCount, BLOCK_SIZE);
 
-        Serial.println("[USBMSC] ✅ Ready");
+        //USBSerial.println("[USBMSC] ✅ Ready");
     }
 
     void onDestroy() override {

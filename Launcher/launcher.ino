@@ -11,6 +11,8 @@
 #include "SensorPCF85063.hpp"
 #include <esp_sleep.h>
 
+#include "HWCDC.h"
+
 #include "SDManager.h"
 #include "ScreenManager.h"
 #include "HomeScreen.h"
@@ -52,11 +54,12 @@ std::unique_ptr<Arduino_FT3x68> FT3168(new Arduino_FT3x68(IIC_Bus, FT3168_DEVICE
 #if LV_USE_LOG != 0
 /* Serial debugging */
 void my_print(const char *buf) {
-  Serial.printf(buf);
+  //USBSerial.printf(buf);
   Serial.flush();
 }
 #endif
 
+HWCDC USBSerial;
 SDManager sdManager;
 ScreenManager screenManager;
 XPowersPMU power;
@@ -138,18 +141,18 @@ void alwaysOn() {
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);
+  USBSerial.begin(115200);
   pinMode(0, INPUT_PULLUP);
 
   delay(1000);
 
-  Serial.println("Startup!");
+  //USBSerial.println("Startup!");
 
   if (!i2s.begin(I2S_MODE_STD, EXAMPLE_SAMPLE_RATE,
                I2S_DATA_BIT_WIDTH_16BIT,
                I2S_SLOT_MODE_STEREO,
                I2S_STD_SLOT_BOTH)) {
-    Serial.println("Failed to initialize I2S bus!");
+    //USBSerial.println("Failed to initialize I2S bus!");
     return;
   }
 
@@ -163,13 +166,13 @@ void setup() {
 
   // Inizializza PMU
   if (!power.begin(Wire, AXP2101_SLAVE_ADDRESS, IIC_SDA, IIC_SCL)) {
-    //USB//Serial.println("Power management init failed!");
+    //USB////USBSerial.println("Power management init failed!");
   } else {
-    //USB//Serial.println("Power management ready");
+    //USB////USBSerial.println("Power management ready");
   }
   
   if (!rtc.begin(Wire, PCF85063_SLAVE_ADDRESS, IIC_SDA, IIC_SCL)) {
-    //USBSerial.println("Failed to find PCF8563 - check your wiring!");
+    //USB//USBSerial.println("Failed to find PCF8563 - check your wiring!");
     while (1) {
       delay(1000);
     }
@@ -183,9 +186,9 @@ void setup() {
   lv_fs_sd_init();
 
   if(!sdManager.init()) {
-    Serial.println("Cannot Mound Card");
+    //USBSerial.println("Cannot Mound Card");
   } else {
-    Serial.println("Card Mounted");
+    //USBSerial.println("Card Mounted");
   }
 
   #if LV_USE_LOG != 0
@@ -353,17 +356,17 @@ void returnToLauncher() {
     const esp_partition_t* launcherPartition = esp_ota_get_next_update_partition(nullptr);
 
     if (!launcherPartition) {
-        Serial.println("Errore: impossibile trovare la partizione del launcher!");
+        //USBSerial.println("Errore: impossibile trovare la partizione del launcher!");
         return;
     }
 
     // Imposta la partizione del launcher come bootable
     if (esp_ota_set_boot_partition(launcherPartition) != ESP_OK) {
-        Serial.println("Errore: impossibile cambiare partizione di boot");
+        //USBSerial.println("Errore: impossibile cambiare partizione di boot");
         return;
     }
 
-    Serial.println("Riavvio per tornare al launcher...");
+    //USBSerial.println("Riavvio per tornare al launcher...");
     delay(500);
     esp_restart();  // Riavvia ESP32, partirà dal launcher
 }

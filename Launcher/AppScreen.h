@@ -1,9 +1,12 @@
 #pragma once
 #include <lvgl.h>
+#include "HWCDC.h"
 
 #include "Utils.h"
 #include "ScreenManager.h"
 #include "AppState.h"
+
+extern HWCDC USBSerial;
 
 class AppScreen {
 protected:

@@ -21,3 +21,9 @@ struct WifiNetwork {
     bool saved = false;
     bool connected = false;
 };
+
+struct FileEntry {
+    String name;
+    bool isDirectory;
+    size_t size;
+};

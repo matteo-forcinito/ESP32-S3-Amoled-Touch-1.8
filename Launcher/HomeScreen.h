@@ -286,7 +286,7 @@ public:
     }
 
     static void cb_test(lv_event_t *e) {
-    Serial.println("Clicked item");
+    //USBSerial.println("Clicked item");
 }
 
 
@@ -300,7 +300,7 @@ static void cb_openApp(lv_event_t *e) {
     if (!pName) return;
 
     const char *appName = pName->c_str();
-    Serial.printf("[HomeScreen] 📦 Apertura app: %s\n", appName);
+    //USBSerial.printf("[HomeScreen] 📦 Apertura app: %s\n", appName);
 
     // Creiamo il msgbox: passiamo ctx che contiene la copy, oppure creiamo un nuovo ctx
     static const char *btns[] = {"Si", "No", NULL};
@@ -326,7 +326,7 @@ static void cb_openApp(lv_event_t *e) {
 
         const char *txt = lv_msgbox_get_active_btn_text(ctx->mbox);
         if (txt && strcmp(txt, "Si") == 0) {
-            Serial.printf("[HomeScreen] 🚀 Avvio app %s\n", ctx->name->c_str());
+            //USBSerial.printf("[HomeScreen] 🚀 Avvio app %s\n", ctx->name->c_str());
             ScreenManager::get().changeScreen(new AppInstallerScreen(*(ctx->name)));
         }
 
@@ -343,13 +343,13 @@ static std::vector<MenuItem> externalApps() {
     std::vector<MenuItem> appsList;
 
     if (!sdManager.isReady()) {
-        Serial.println("[HomeScreen] ⚠️ SD non inizializzata");
+        //USBSerial.println("[HomeScreen] ⚠️ SD non inizializzata");
         return appsList;
     }
 
     auto apps = sdManager.listAppFolders("/apps");
     if (apps.empty()) {
-        Serial.println("[HomeScreen] Nessuna app trovata");
+        //USBSerial.println("[HomeScreen] Nessuna app trovata");
         return appsList;
     }
 
@@ -361,10 +361,10 @@ static std::vector<MenuItem> externalApps() {
         String icon;
         if (SD_MMC.exists(iconPath.c_str())) {
             icon = "S:" + iconPath; // Usa driver SD per LVGL
-            Serial.printf("[externalApps] 🖼️ Icona trovata per %s\n", appName.c_str());
+            //USBSerial.printf("[externalApps] 🖼️ Icona trovata per %s\n", appName.c_str());
         } else {
             icon = String(PLACEHOLDER_PATH);
-            Serial.printf("[externalApps] 🖼️ Icona default per %s\n", appName.c_str());
+            //USBSerial.printf("[externalApps] 🖼️ Icona default per %s\n", appName.c_str());
         }
 
         // Aggiunge il MenuItem alla lista
@@ -448,14 +448,14 @@ void loadAppList() {
   loadSystemApps();
 
     if (!sdManager.isReady()) {
-        Serial.println("[HomeScreen] ⚠️ SD non inizializzata");
+        //USBSerial.println("[HomeScreen] ⚠️ SD non inizializzata");
         lv_label_set_text(labelStatus, "SD non pronta");
         return;
     }
 
     auto apps = sdManager.listAppFolders("/apps");
     if (apps.empty()) {
-        Serial.println("[HomeScreen] Nessuna app trovata");
+        //USBSerial.println("[HomeScreen] Nessuna app trovata");
         lv_label_set_text(labelStatus, "Nessuna app trovata");
         return;
     }
@@ -465,7 +465,7 @@ void loadAppList() {
         String binPath = appPath + "/" + appName + ".bin";
         String iconPath = appPath + "/icon.bin";
 
-        Serial.printf("[HomeScreen] App trovata: %s\n", appName.c_str());
+        //USBSerial.printf("[HomeScreen] App trovata: %s\n", appName.c_str());
 
         // Crea il container per ogni app
         lv_obj_t *cont = lv_obj_create(list);
@@ -486,10 +486,10 @@ void loadAppList() {
         if (SD_MMC.exists(iconPath.c_str())) {
             String lvPath = "S:" + iconPath; // driver SD registrato in LVGL
             lv_img_set_src(icon, lvPath.c_str());
-            Serial.printf("[HomeScreen] 🖼️ Icona personalizzata: %s\n", iconPath.c_str());
+            //USBSerial.printf("[HomeScreen] 🖼️ Icona personalizzata: %s\n", iconPath.c_str());
         } else {
             lv_img_set_src(icon, PLACEHOLDER_PATH);
-            Serial.printf("[HomeScreen] 🖼️ Icona default per %s\n", appName.c_str());
+            //USBSerial.printf("[HomeScreen] 🖼️ Icona default per %s\n", appName.c_str());
         }
         lv_obj_set_size(icon, 64, 64);
 
@@ -503,7 +503,7 @@ void loadAppList() {
         lv_obj_set_width(label, LV_SIZE_CONTENT);
         lv_obj_set_style_pad_top(label, 6, 0);
 String *appNamePtr = new String(appName);
-Serial.println("[DEBUG] Created appNamePtr with value: " + *appNamePtr);
+//USBSerial.println("[DEBUG] Created appNamePtr with value: " + *appNamePtr);
 
 lv_obj_add_flag(cont, LV_OBJ_FLAG_CLICKABLE);
 lv_obj_add_event_cb(cont, [](lv_event_t * e) {
@@ -527,7 +527,7 @@ lv_obj_add_event_cb(cont, [](lv_event_t * e) {
             if (!txt) return;
 
             if (strcmp(txt, "Si") == 0) {
-                Serial.printf("Apro l'app: %s\n", ctx->appName->c_str());
+                //USBSerial.printf("Apro l'app: %s\n", ctx->appName->c_str());
                 ScreenManager::get().changeScreen(new AppInstallerScreen(*(ctx->appName)));
             }
 
@@ -546,13 +546,13 @@ lv_obj_add_event_cb(cont, [](lv_event_t * e) {
 }
 
 static void mbox_event_handler(lv_event_t* e2) {
-    Serial.println("mbox_event_handler");
+    //USBSerial.println("mbox_event_handler");
     String* appName = (String*)lv_event_get_user_data(e2);
-    Serial.println("mbox_event_handler::got app name");
+    //USBSerial.println("mbox_event_handler::got app name");
     const char* btnTxt = lv_msgbox_get_active_btn_text(lv_event_get_target(e2));
-    Serial.println("mbox_event_handler::got btn text");
+    //USBSerial.println("mbox_event_handler::got btn text");
     if (btnTxt && strcmp(btnTxt, "Si") == 0) {
-        Serial.println("Apro l'app: " + *appName);
+        //USBSerial.println("Apro l'app: " + *appName);
         ScreenManager::get().changeScreen(new AppInstallerScreen(*(appName)));
     }
 }

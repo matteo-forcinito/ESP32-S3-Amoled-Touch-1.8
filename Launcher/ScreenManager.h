@@ -22,7 +22,8 @@ public:
         lv_timer_t * t = lv_timer_create([](lv_timer_t * timer) {
           AppScreen* app = (AppScreen*) timer->user_data;
           if(app) {
-            app->destroy();
+            //app->destroy();
+            delete app;
           }
           lv_timer_del(timer); // elimina il timer
         }, 500, old);

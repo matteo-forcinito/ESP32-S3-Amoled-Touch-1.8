@@ -9,6 +9,7 @@
 #include "WifiQualityScreen.h"
 #include "WebServerScreen.h"
 #include "USBMSCScreen.h"
+#include "FileExplorerScreen.h"
 
 class SystemAppsNavigation : public Navigation {
 public:
@@ -62,6 +63,12 @@ public:
                 //ScreenManager::get().changeScreen(new SetTimeScreen());
                 SetTimeNavigation stn;
                 stn.open();
+            });
+        });
+
+        appsList.emplace_back("File Explorer", "S:/assets/icons/file-explorer.bin", [](lv_event_t *e) {
+            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
+                ScreenManager::get().changeScreen(new FileExplorerScreen("/", "Home"));
             });
         });
 

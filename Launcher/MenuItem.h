@@ -6,6 +6,7 @@ struct MenuItem {
     String name;
     String icon;
     lv_event_cb_t callback; // <-- questo rimane
+    void* userData = nullptr;
 
     MenuItem() : name(), icon(), callback(nullptr) {}
 

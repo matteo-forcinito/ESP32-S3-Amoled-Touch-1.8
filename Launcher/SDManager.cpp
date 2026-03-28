@@ -3,18 +3,18 @@
 bool SDManager::init() {
     SD_MMC.setPins(SDMMC_CLK, SDMMC_CMD, SDMMC_DATA);
     if (!SD_MMC.begin("/sdcard", true)) {
-        Serial.println("[SDManager] ❌ Card Mount Failed");
+        //USBSerial.println("[SDManager] ❌ Card Mount Failed");
         initialized = false;
         return false;
     }
 
     if (SD_MMC.cardType() == CARD_NONE) {
-        Serial.println("[SDManager] ❌ No SD card found");
+        //USBSerial.println("[SDManager] ❌ No SD card found");
         initialized = false;
         return false;
     }
 
-    Serial.println("[SDManager] ✅ SD card initialized successfully");
+    //USBSerial.println("[SDManager] ✅ SD card initialized successfully");
     initialized = true;
     return true;
 }
@@ -22,20 +22,20 @@ bool SDManager::init() {
 std::vector<String> SDManager::listFiles(const char *path, uint8_t levels) {
     std::vector<String> files;
     if (!initialized) {
-        Serial.println("[SDManager] ⚠️ SD card not initialized");
+        //USBSerial.println("[SDManager] ⚠️ SD card not initialized");
         return files;
     }
 
     File root = SD_MMC.open(path);
     if (!root || !root.isDirectory()) {
-        Serial.printf("[SDManager] ❌ Cannot open directory: %s\n", path);
+        //USBSerial.printf("[SDManager] ❌ Cannot open directory: %s\n", path);
         return files;
     }
 
     File file = root.openNextFile();
     while (file) {
         if (file.isDirectory()) {
-            Serial.printf("DIR : %s\n", file.name());
+            //USBSerial.printf("DIR : %s\n", file.name());
             if (levels) {
                 // Ricorsione
                 auto subFiles = listFiles(file.path(), levels - 1);
@@ -43,7 +43,7 @@ std::vector<String> SDManager::listFiles(const char *path, uint8_t levels) {
             }
         } else {
             String filePath = String(file.path());
-            Serial.printf("FILE: %s (%u bytes)\n", filePath.c_str(), (unsigned int)file.size());
+            //USBSerial.printf("FILE: %s (%u bytes)\n", filePath.c_str(), (unsigned int)file.size());
             files.push_back(filePath);
         }
         file = root.openNextFile();
@@ -52,17 +52,42 @@ std::vector<String> SDManager::listFiles(const char *path, uint8_t levels) {
     return files;
 }
 
+std::vector<FileEntry> SDManager::listFolder(const char *path) {
+    std::vector<FileEntry> list;
+
+    if (!initialized) return list;
+
+    File root = SD_MMC.open(path);
+    if (!root || !root.isDirectory()) return list;
+
+    File entry = root.openNextFile();
+    while (entry) {
+        FileEntry e;
+
+        String fullName = String(entry.name());
+        e.name = fullName.substring(fullName.lastIndexOf('/') + 1);
+        e.isDirectory = entry.isDirectory();
+        e.size = entry.size();
+
+        list.push_back(e);
+
+        entry = root.openNextFile();
+    }
+
+    return list;
+}
+
 std::vector<String> SDManager::listAppFolders(const char *path) {
     std::vector<String> apps;
 
     if (!initialized) {
-        Serial.println("[SDManager] ⚠️ SD card not initialized");
+        //USBSerial.println("[SDManager] ⚠️ SD card not initialized");
         return apps;
     }
 
     File root = SD_MMC.open(path);
     if (!root || !root.isDirectory()) {
-        Serial.printf("[SDManager] ❌ Cannot open directory: %s\n", path);
+        //USBSerial.printf("[SDManager] ❌ Cannot open directory: %s\n", path);
         return apps;
     }
 
@@ -70,7 +95,7 @@ std::vector<String> SDManager::listAppFolders(const char *path) {
     while (folder) {
         if (folder.isDirectory()) {
             String folderName = String(folder.name());
-            Serial.printf("[SDManager] 📁 Found folder: %s\n", folderName.c_str());
+            //USBSerial.printf("[SDManager] 📁 Found folder: %s\n", folderName.c_str());
 
             // Costruisci il percorso completo del bin
             String expectedBin = String(path) + "/" + folderName + "/" + folderName + ".bin";
@@ -78,9 +103,9 @@ std::vector<String> SDManager::listAppFolders(const char *path) {
             // Verifica se esiste l'eseguibile
             if (SD_MMC.exists(expectedBin.c_str())) {
                 apps.push_back(folderName);
-                Serial.printf("[SDManager] ✅ App valida trovata: %s\n", folderName.c_str());
+                //USBSerial.printf("[SDManager] ✅ App valida trovata: %s\n", folderName.c_str());
             } else {
-                Serial.printf("[SDManager] ⚠️ Nessun .bin valido in: %s\n", folderName.c_str());
+                //USBSerial.printf("[SDManager] ⚠️ Nessun .bin valido in: %s\n", folderName.c_str());
             }
         }
         folder = root.openNextFile();

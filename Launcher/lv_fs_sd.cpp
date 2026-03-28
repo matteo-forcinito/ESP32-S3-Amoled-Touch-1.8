@@ -60,5 +60,5 @@ void lv_fs_sd_init(void) {
 
     lv_fs_drv_register(&drv);
 
-    Serial.println("[LVGL] ✅ Filesystem driver 'S:' registrato per SD_MMC");
+    //USBSerial.println("[LVGL] ✅ Filesystem driver 'S:' registrato per SD_MMC");
 }

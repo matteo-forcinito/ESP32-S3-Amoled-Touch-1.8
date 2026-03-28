@@ -90,7 +90,7 @@ public:
     void loop() override {
         if (!isConnected && !wifiRequested) {
             wifiRequested = true;
-            Serial.println("Connessione Al WiFi");
+            //USBSerial.println("Connessione Al WiFi");
             connectWiFi();
         }
 
@@ -196,12 +196,12 @@ public:
 
     void mpdSend(const String &cmd) {
         if (!mpdConnect()) {
-            Serial.println("❌ Connessione a MPD fallita!");
+            //USBSerial.println("❌ Connessione a MPD fallita!");
             if (labelStatus) lv_label_set_text(labelStatus, "❌ Connessione MPD fallita!");
             return;
         }
         mpdClient.print(cmd + "\n");
-        Serial.println("➡️ " + cmd);
+        //USBSerial.println("➡️ " + cmd);
     }
 
     std::vector<String> mpdList(const String &command, const String &key) {
@@ -304,10 +304,10 @@ void populatePlaylistFiles(const String &name) {
 void populateRadioFiles(const String &playlistName) {
     clearListItems();
     lv_obj_clear_flag(btnBack, LV_OBJ_FLAG_HIDDEN);
-    Serial.println("=== Playlist: " + playlistName + " ===");
+    //USBSerial.println("=== Playlist: " + playlistName + " ===");
     auto lines = mpdList("listplaylist \"" + playlistName + "\"", "file");
     for(auto &line : lines) {
-        Serial.println(line);
+        //USBSerial.println(line);
         String displayName = line;
         // se è una riga #EXTINF, prendiamo solo il nome
         if(line.startsWith("#EXTINF:")) {
@@ -325,7 +325,7 @@ void populateQueue() {
     clearListItems();
     lv_obj_clear_flag(btnBack, LV_OBJ_FLAG_HIDDEN);
 
-    Serial.println("=== Queue ===");
+    //USBSerial.println("=== Queue ===");
 
     // Lista dei file nella coda corrente
     auto queueFiles = mpdList("playlistinfo", "file"); // prende tutti i file in coda
@@ -339,7 +339,7 @@ void populateQueue() {
         }
 
         addListItem(displayName, ITEM_FILE, LV_SYMBOL_AUDIO);
-        Serial.println(displayName);
+        //USBSerial.println(displayName);
     }
 
     currentType = ITEM_QUEUE; // puoi creare un nuovo tipo ITEM_QUEUE se vuoi
@@ -573,7 +573,7 @@ void shutdownMoode() {
 
     WiFiClient client;
     if (!client.connect("192.168.1.128", 80)) {
-        Serial.println("Connessione fallita...");
+        //USBSerial.println("Connessione fallita...");
         return;
     }
 
@@ -582,7 +582,7 @@ void shutdownMoode() {
     client.println("Connection: close");
     client.println();
 
-    Serial.println("Shutdown inviato a moOde");
+    //USBSerial.println("Shutdown inviato a moOde");
 }
 
 

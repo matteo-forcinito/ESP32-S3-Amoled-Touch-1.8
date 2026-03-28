@@ -28,7 +28,7 @@ public:
                 if (!txt) return;
 
                 if (strcmp(txt, "Si") == 0) {
-                    Serial.printf("Apro l'app: %s\n", ctx->appName->c_str());
+                    //USBSerial.printf("Apro l'app: %s\n", ctx->appName->c_str());
                     ScreenManager::get().changeScreen(new AppInstallerScreen(*(ctx->appName)));
                 }
 

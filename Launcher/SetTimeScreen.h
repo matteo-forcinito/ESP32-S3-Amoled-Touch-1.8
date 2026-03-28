@@ -99,7 +99,7 @@ public:
 
     void saveDateTime() {
         if (selectedDate.day == 0) {
-            Serial.println("[SetTimeScreen] ⚠️ Nessuna data selezionata");
+            //USBSerial.println("[SetTimeScreen] ⚠️ Nessuna data selezionata");
             return;
         }
 
@@ -121,7 +121,7 @@ public:
         struct timeval now = { .tv_sec = newTime };
         settimeofday(&now, nullptr);
 
-        Serial.printf("[SetTimeScreen] ✅ Nuovo orario impostato: %s", ctime(&newTime));
+        //USBSerial.printf("[SetTimeScreen] ✅ Nuovo orario impostato: %s", ctime(&newTime));
 
         // Salva su SD
 
@@ -129,7 +129,7 @@ public:
         backHome = true;
     }
 static void calendar_event_handler(lv_event_t *e) {
-    Serial.println("calendar_event_handler start");
+    //USBSerial.println("calendar_event_handler start");
 
     auto *screen = static_cast<SetTimeScreen *>(lv_event_get_user_data(e));
     lv_event_code_t code = lv_event_get_code(e);
@@ -138,7 +138,7 @@ static void calendar_event_handler(lv_event_t *e) {
     if(code == LV_EVENT_VALUE_CHANGED) {
         lv_calendar_date_t date;
         if(lv_calendar_get_pressed_date(obj, &date)) {
-            Serial.printf("Clicked date: %02d.%02d.%d", date.day, date.month, date.year);
+            //USBSerial.printf("Clicked date: %02d.%02d.%d", date.day, date.month, date.year);
             screen->selectedDate = date;
         }
     }

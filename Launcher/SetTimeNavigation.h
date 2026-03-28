@@ -66,7 +66,7 @@ public:
     }
 
   static void setTime() {
-    Serial.print("Inizializzando l'ora..");
+    //USBSerial("Inizializzando l'ora..");
 
     configTime(0, 0, "pool.ntp.org");
     setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
