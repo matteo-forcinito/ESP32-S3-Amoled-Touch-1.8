@@ -2,6 +2,7 @@
 #include "SDManager.h"
 #include "AppScreen.h"
 #include "MenuItem.h"
+#include "FileViewerScreen.h"
 
 extern SDManager sdManager;
 
@@ -35,7 +36,14 @@ private:
     }
 
     static void dummyCallback(lv_event_t *e) {
-    // Non fa nulla, solo per permettere la visualizzazione
+        lv_obj_t *obj = lv_event_get_target(e);
+        String path((const char*) lv_event_get_user_data(e));
+        USBSerial.print("Opening ");
+        USBSerial.println(path);
+        if (path.length() < 1) return;
+
+        // Cambia schermata con il nuovo path
+        ScreenManager::get().openModal(new FileViewerScreen(path));
     }
 
 public:
