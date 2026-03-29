@@ -126,7 +126,7 @@ public:
     lv_obj_t *lblWebServer = lv_label_create(btnWebServer);
     lv_label_set_text(lblWebServer, "WebServer Running..");
     lv_obj_add_event_cb(btnWebServer, [](lv_event_t *e) {
-      ScreenManager::get().changeScreen(new WebServerScreen());
+      ScreenManager::get().openModal(new WebServerScreen());
     }, LV_EVENT_CLICKED, NULL);
 
     if(!webServerRunning) {
