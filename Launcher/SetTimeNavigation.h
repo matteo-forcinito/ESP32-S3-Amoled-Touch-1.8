@@ -1,6 +1,7 @@
 #pragma once
 #include "Navigation.h"
 #include "SetTimeScreen.h"
+#include "WiFiScreen.h"
 
 extern SensorPCF85063 rtc;
 
@@ -54,8 +55,7 @@ public:
         appsList.emplace_back("Set Auto", LV_SYMBOL_WIFI, [](lv_event_t *e) {
             SetTimeNavigation::onAppClick(e, [](lv_event_t *e){
               if(WiFi.status() != WL_CONNECTED) {
-                lv_obj_t *mbox = lv_msgbox_create(lv_layer_top(), "Attention", "Devi essere connesso al Wifi!", NULL, true);
-                lv_obj_center(mbox);
+                ScreenManager::get().openModal(new WiFiScreen());
               } else {
                 SetTimeNavigation::setTime();
               }
