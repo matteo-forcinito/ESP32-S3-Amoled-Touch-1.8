@@ -14,6 +14,8 @@ protected:
     AppState id = APP_INVALID_APP;
 
     bool requestedTime = false;
+
+    AppScreen *modal = nullptr;
 public:
     AppScreen() : root(nullptr) {}
     virtual ~AppScreen() { destroy(); }
@@ -25,7 +27,9 @@ public:
     virtual void onLoop() {}
 
     void loop() {
-        if(root) {
+        if(modal) {
+            modal->loop();
+        } else if(root) {
             onLoop();
         }
     }
@@ -38,6 +42,33 @@ public:
         onCreate();
     }
 
+    void openModal(AppScreen *newModal) {
+        if(!newModal) return;
+        modal = newModal;
+        if(modal) {
+            modal->create();
+            modal->show();
+        }
+    }
+
+    void closeModal() {
+        if(!modal) return;
+        
+        AppScreen *old = modal;
+        modal = nullptr;
+
+        create();
+        show();
+        
+        lv_timer_t * t = lv_timer_create([](lv_timer_t * timer) {
+          AppScreen* app = (AppScreen*) timer->user_data;
+          if(app) {
+            delete app;
+          }
+          lv_timer_del(timer); // elimina il timer
+        }, 500, old);
+    }
+
     // Mostra questa schermata
     void show() {
         if (root)
@@ -47,11 +78,11 @@ public:
 
     // Distrugge l'oggetto LVGL e chiama onDestroy()
     void destroy() {
+        onDestroy();
         if (root) {
             lv_obj_del(root);
             root = nullptr;
         }
-        onDestroy();
     }
 
     void touch(int32_t x, int32_t y, int32_t fingers) {
@@ -69,4 +100,6 @@ public:
     bool isRequestedTime() {
         return requestedTime;
     }
+
+    AppScreen* getModal() { return modal; }
 };

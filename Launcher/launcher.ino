@@ -295,7 +295,9 @@ void loop() {
   if(digitalRead(0) == HIGH && bootPressedTime != 0) {
     if(millis() - bootPressedTime < 1000) {
       if(screenManager.getCurrent() != nullptr) {
-        if(screenManager.getCurrent()->getId() != APP_HOME) {
+        if(screenManager.getCurrent()->getModal()) {
+          screenManager.getCurrent()->closeModal();
+        } else if(screenManager.getCurrent()->getId() != APP_HOME) {
           home.open();
         } 
       }

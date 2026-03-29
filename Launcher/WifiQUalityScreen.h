@@ -25,7 +25,7 @@ lv_obj_set_flex_align(root,
         lv_label_set_text(lbl, "Devi essere connesso al Wifi!");
         lv_obj_t *btn = lv_btn_create(root);
         lv_obj_add_event_cb(btn, [](lv_event_t *e) {
-          ScreenManager::get().changeScreen(new WiFiScreen());
+          ScreenManager::get().openModal(new WiFiScreen());
         }, LV_EVENT_CLICKED, NULL);
         lbl = lv_label_create(btn);
         lv_label_set_text(lbl, "Connect");

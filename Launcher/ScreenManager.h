@@ -29,8 +29,15 @@ public:
         }, 500, old);
     }
 
+    void openModal(AppScreen *app) {
+        if(!app) return;
+        if(current->getModal()) current->closeModal();
+
+        current->openModal(app);
+    }
+
     void loop() {
-        if (current) current->onLoop();
+        if (current) current->loop();
     }
 
     void touch(int32_t x, int32_t y, int32_t fingers) {

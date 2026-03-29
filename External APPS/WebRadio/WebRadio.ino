@@ -125,7 +125,7 @@ void loop() {
   }
 
   ScreenManager screenManager = ScreenManager::get();
-  screenManager.onLoop();
+  screenManager->loop();
   
   int32_t x = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::TOUCH_COORDINATE_X);
   int32_t y = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::TOUCH_COORDINATE_Y);

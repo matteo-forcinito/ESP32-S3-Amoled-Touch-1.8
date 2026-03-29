@@ -97,7 +97,7 @@ private:
             lv_obj_t *btn = lv_btn_create(root);
             lv_obj_add_event_cb(btn, [](lv_event_t *e) {
               WebServerManager::get().stop();
-              ScreenManager::get().changeScreen(new WiFiScreen());
+              ScreenManager::get().openModal(new WiFiScreen());
             }, LV_EVENT_CLICKED, NULL);
 
             lv_obj_t *lbl2 = lv_label_create(btn);

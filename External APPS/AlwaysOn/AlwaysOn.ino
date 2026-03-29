@@ -141,7 +141,7 @@ void loop() {
   int32_t fingers = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::Value_Information::TOUCH_FINGER_NUMBER);
   //alwaysOnScreen.touch(x, y, fingers);
   if(openApp != nullptr) {
-    openApp->onLoop();
+    openApp->loop();
     openApp->touch(x, y, fingers);
   } else {
     launcher->touch(x, y, fingers);

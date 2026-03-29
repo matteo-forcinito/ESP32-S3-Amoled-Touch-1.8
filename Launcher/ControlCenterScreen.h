@@ -86,7 +86,7 @@ public:
 
     lv_obj_t *wifiButton = createIconButton(buttonsContainer, LV_SYMBOL_WIFI);
     lv_obj_add_event_cb(wifiButton, [](lv_event_t *e) {
-      ScreenManager::get().changeScreen(new WiFiScreen());
+      ScreenManager::get().openModal(new WiFiScreen());
     }, LV_EVENT_CLICKED, NULL);
     lv_obj_t *bleButton = createIconButton(buttonsContainer, LV_SYMBOL_BLUETOOTH);
     lv_obj_t *settingsButton = createIconButton(buttonsContainer, LV_SYMBOL_SETTINGS);
