@@ -1,259 +1,150 @@
 #pragma once
-#include <WebServer.h>
 #include "AppScreen.h"
 #include "WiFiScreen.h"
+#include "WebServerManager.h"
 
 class WebServerScreen : public AppScreen {
 private:
-  enum class Type {
-      AP,
-      STA,
-      IDLE
-  };
+    WebServerManager::Status lastStatus = WebServerManager::Status::IDLE;
 
-  enum class Status {
-    IDLE,
-    RUNNING,
-    ERROR_WIFI_DISCONNECTED
-  };
-
-  Type type = Type::IDLE;
-  Status status = Status::IDLE;
-  Status lastStatus = Status::IDLE;
-  String ipAddress = "";
-  WebServer server{80};
-  bool serverStarted = false;
-
-  String cSSID = "SmartBox";
-  String cPWD = "12345678";
-  String user = "admin";
-  String pwd = "admin";
+    String cSSID = "SmartBox";
+    String cPWD = "12345678";
+    String user = "admin";
+    String pwd = "admin";
 
 public:
 
-  void onCreate() override {
-      lv_obj_set_flex_flow(root, LV_FLEX_FLOW_COLUMN);
-      lv_obj_set_flex_align(root,
-                      LV_FLEX_ALIGN_CENTER,  // orizzontalmente
-                      LV_FLEX_ALIGN_CENTER,  // verticalmente tra i figli
-                      LV_FLEX_ALIGN_CENTER); // spazio tra items
-      lv_obj_set_style_pad_all(root, 10, 0);
-
-      createButtons();
-  }
-
-  void createButtons() {
-    lv_obj_t *button = lv_obj_create(root);
-    lv_obj_remove_style_all(button);
-    lv_obj_set_width(button, lv_pct(100));
-    lv_obj_set_flex_grow(button, 1);
-    lv_obj_set_flex_flow(button, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(button,
-                    LV_FLEX_ALIGN_CENTER,  // orizzontalmente
-                    LV_FLEX_ALIGN_CENTER,  // verticalmente tra i figli
-                    LV_FLEX_ALIGN_CENTER); // spazio tra items
-
-    lv_obj_t *btnAP = lv_btn_create(button);
-    lv_obj_add_event_cb(btnAP, [](lv_event_t *e) {
-        auto self = static_cast<WebServerScreen*>(lv_event_get_user_data(e));
-        self->startAP();
-    }, LV_EVENT_CLICKED, this);
-    lv_obj_t *lblAP = lv_label_create(btnAP);
-    lv_label_set_text(lblAP, "Access Point");
-
-    button = lv_obj_create(root);
-    lv_obj_remove_style_all(button);
-    lv_obj_set_width(button, lv_pct(100));
-    lv_obj_set_flex_grow(button, 1);
-    lv_obj_set_flex_flow(button, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(button,
-                    LV_FLEX_ALIGN_CENTER,  // orizzontalmente
-                    LV_FLEX_ALIGN_CENTER,  // verticalmente tra i figli
-                    LV_FLEX_ALIGN_CENTER); // spazio tra items
-
-    lv_obj_t *btnSTA = lv_btn_create(button);
-    lv_obj_add_event_cb(btnSTA, [](lv_event_t *e) {
-      auto self = static_cast<WebServerScreen*>(lv_event_get_user_data(e));
-      self->startSTA();
-    }, LV_EVENT_CLICKED, this);
-
-    lv_obj_t *lblSTA = lv_label_create(btnSTA);
-    lv_label_set_text(lblSTA, "My Network");
-  }
-
-  void loop() override {
-    if (type != Type::IDLE) {
-      server.handleClient();
+    void onCreate() override {
+        setupLayout();
+        createButtons();
     }
 
-    if(lastStatus == status) return;
+    void loop() override {
+        auto& ws = WebServerManager::get();
+        ws.loop();
 
-    lv_obj_clean(root);
-    lv_obj_set_flex_flow(root, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(root,
-                    LV_FLEX_ALIGN_CENTER,  // orizzontalmente
-                    LV_FLEX_ALIGN_CENTER,  // verticalmente tra i figli
-                    LV_FLEX_ALIGN_CENTER); // spazio tra items
-    lv_obj_set_style_pad_all(root, 10, 0);
+        auto status = ws.getStatus();
+        if (status == lastStatus) return;
 
-    switch(status) {
-      case Status::IDLE: {
-        createButtons();
+        rebuildUI(status);
+        lastStatus = status;
+    }
 
-        break;
-      }
+private:
 
-      case Status::RUNNING: {
-        lv_obj_t *lblIp = lv_label_create(root);
-        lv_label_set_text(lblIp, ipAddress.c_str());
+    void setupLayout() {
+        lv_obj_set_flex_flow(root, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(root,
+            LV_FLEX_ALIGN_CENTER,
+            LV_FLEX_ALIGN_CENTER,
+            LV_FLEX_ALIGN_CENTER);
+        lv_obj_set_style_pad_all(root, 10, 0);
+    }
 
-        lv_obj_t *creds;
-        lv_obj_t *cred;
-        if(type == Type::AP) {
-          creds = lv_obj_create(root);
-          lv_obj_set_flex_flow(creds, LV_FLEX_FLOW_COLUMN);
-          lv_obj_set_size(creds, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-          cred = lv_label_create(creds); // user
-          lv_label_set_text_fmt(cred, "WiFi: %s", cSSID);
-          cred = lv_label_create(creds); // pwd
-          lv_label_set_text_fmt(cred, "Pass: %s", cPWD);
+    void rebuildUI(WebServerManager::Status status) {
+        lv_obj_clean(root);
+        setupLayout();
 
+        auto& ws = WebServerManager::get();
+
+        switch (status) {
+
+        case WebServerManager::Status::IDLE:
+            createButtons();
+            break;
+
+        case WebServerManager::Status::RUNNING: {
+            lv_obj_t *lblIp = lv_label_create(root);
+            lv_label_set_text(lblIp, ws.getIP().c_str());
+
+            if (ws.getType() == WebServerManager::Type::AP) {
+                lv_obj_t *creds = lv_obj_create(root);
+                lv_obj_set_size(creds, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                lv_obj_set_flex_flow(creds, LV_FLEX_FLOW_COLUMN);
+
+                lv_obj_t *l = lv_label_create(creds);
+                lv_label_set_text_fmt(l, "WiFi: %s", cSSID);
+
+                l = lv_label_create(creds);
+                lv_label_set_text_fmt(l, "Pass: %s", cPWD);
+            }
+
+            lv_obj_t *creds = lv_obj_create(root);
+            lv_obj_set_size(creds, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_set_flex_flow(creds, LV_FLEX_FLOW_COLUMN);
+
+            lv_obj_t *l = lv_label_create(creds);
+            lv_label_set_text_fmt(l, "User: %s", user);
+
+            l = lv_label_create(creds);
+            lv_label_set_text_fmt(l, "Pass: %s", pwd);
+
+            lv_obj_t *btn = lv_btn_create(root);
+            lv_obj_add_event_cb(btn, [](lv_event_t *e) {
+                WebServerManager::get().stop();
+            }, LV_EVENT_CLICKED, NULL);
+
+            lv_obj_t *lbl = lv_label_create(btn);
+            lv_label_set_text(lbl, "Close");
+
+            break;
         }
 
-        creds = lv_obj_create(root);
-        lv_obj_set_flex_flow(creds, LV_FLEX_FLOW_COLUMN);
-        lv_obj_set_size(creds, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-        cred = lv_label_create(creds); // user
-        lv_label_set_text_fmt(cred, "User: %s", user);
-        cred = lv_label_create(creds); // pwd
-        lv_label_set_text_fmt(cred, "Pass: %s", pwd);
+        case WebServerManager::Status::ERROR_WIFI_DISCONNECTED: {
+            lv_obj_t *lbl = lv_label_create(root);
+            lv_label_set_text(lbl, "Devi essere connesso al wifi!");
 
-        lv_obj_t *btnClose = lv_btn_create(root);
-        lv_obj_add_event_cb(btnClose, [](lv_event_t *e) {
-          auto self = static_cast<WebServerScreen*>(lv_event_get_user_data(e));
-          self->stopServer();
-        }, LV_EVENT_CLICKED, this);
-        lv_obj_t *lblClose = lv_label_create(btnClose);
-        lv_label_set_text(lblClose, "Close");
+            lv_obj_t *btn = lv_btn_create(root);
+            lv_obj_add_event_cb(btn, [](lv_event_t *e) {
+              WebServerManager::get().stop();
+              ScreenManager::get().changeScreen(new WiFiScreen());
+            }, LV_EVENT_CLICKED, NULL);
 
-        break;
-      }
+            lv_obj_t *lbl2 = lv_label_create(btn);
+            lv_label_set_text(lbl2, "Connect");
 
-      case Status::ERROR_WIFI_DISCONNECTED: {
-        lv_obj_t *lblWifi = lv_label_create(root);
-        lv_label_set_text(lblWifi, "Devi essere connesso al wifi!");
-        lv_obj_t *btnWifi = lv_btn_create(root);
-        lv_obj_add_event_cb(btnWifi, [](lv_event_t *e) {
-          ScreenManager::get().changeScreen(new WiFiScreen());
+            break;
+        }
+        }
+    }
+
+    void createButtons() {
+        lv_obj_t *container = lv_obj_create(root);
+        lv_obj_remove_style_all(container);
+        lv_obj_set_width(container, lv_pct(100));
+        lv_obj_set_flex_grow(container, 1);
+        lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(container,
+            LV_FLEX_ALIGN_CENTER,
+            LV_FLEX_ALIGN_CENTER,
+            LV_FLEX_ALIGN_CENTER);
+
+        lv_obj_t *btnAP = lv_btn_create(container);
+        lv_obj_add_event_cb(btnAP, [](lv_event_t *e) {
+            WebServerManager::get().startAP("SmartBox", "12345678");
         }, LV_EVENT_CLICKED, NULL);
 
-        lblWifi = lv_label_create(btnWifi);
-        lv_label_set_text(lblWifi, "Connect");
+        lv_label_set_text(lv_label_create(btnAP), "Access Point");
 
-        break;
-      }
-    } 
+        container = lv_obj_create(root);
+        lv_obj_remove_style_all(container);
+        lv_obj_set_width(container, lv_pct(100));
+        lv_obj_set_flex_grow(container, 1);
+        lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(container,
+            LV_FLEX_ALIGN_CENTER,
+            LV_FLEX_ALIGN_CENTER,
+            LV_FLEX_ALIGN_CENTER);
 
-    lastStatus = status;
-  }
+        lv_obj_t *btnSTA = lv_btn_create(container);
+        lv_obj_add_event_cb(btnSTA, [](lv_event_t *e) {
+            WebServerManager::get().startSTA();
+        }, LV_EVENT_CLICKED, NULL);
 
-  void startAP() {
-    type = Type::AP;
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP(cSSID.c_str(), cPWD.c_str());
-
-    ipAddress = WiFi.softAPIP().toString();
-    setupServer();
-  }
-
-  void startSTA() {
-    if (WiFi.status() == WL_CONNECTED) {
-        type = Type::STA;
-        ipAddress = WiFi.localIP().toString();
-        setupServer();
-    } else {
-      status = Status::ERROR_WIFI_DISCONNECTED;
-    }
-  }
-
-  void setupServer() {
-    if (serverStarted) return;
-
-    server.on("/", [this]() {
-        if(!isLoggedIn()) {
-           return server.requestAuthentication();
-        } 
-        
-        String page = "<h1>Benvenuto!</h1>";
-        page += "<p>Il tuo IP: " + server.client().remoteIP().toString() + "</p>";
-        page += "<a href='/addNetwork'> Configure WiFi </a>";
-
-        server.send(200, "text/html", page);
-    });
-
-    server.on("/addNetwork", [this]() {
-      if (!isLoggedIn()) return server.requestAuthentication();
-
-      // scan in background
-      int n = WiFi.scanNetworks();
-      String page = "<h1>Seleziona rete</h1>";
-      page += "<form method='POST' action='/saveNetwork'>";
-      page += "<select name='ssid'>";
-      for (int i = 0; i < n; ++i) {
-          page += "<option value='" + WiFi.SSID(i) + "'>" + WiFi.SSID(i) + "</option>";
-      }
-      page += "</select>";
-      page += "<input type='password' name='pwd'>";
-      page += "<button type='submit'>Salva</button>";
-      page += "</form>";
-      server.send(200, "text/html", page);
-  });
-
-  // POST: salva
-    server.on("/saveNetwork", HTTP_POST, [this]() {
-        if (!isLoggedIn()) return server.requestAuthentication();
-
-        String ssid = server.arg("ssid");
-        String pwd  = server.arg("pwd");
-
-        // Salva subito la rete
-        WifiManager wm;
-        bool ok = wm.saveNetwork("/networks.json", ssid, pwd);
-
-        // Risposta immediata al client
-        String page = "<h1>";
-        page += ok ? "Rete salvata correttamente!" : "Errore nel salvataggio!";
-        page += "</h1>";
-        page += "<p>SSID: " + ssid + "</p>";
-        page += "<a href='/'>Torna alla home</a>";
-
-        server.send(200, "text/html", page);
-
-        // Poi collega la rete in background senza bloccare
-        wm.connect(ssid, pwd); // aggiorna lo stato interno, il loop del dispositivo si occuperà di connettersi
-    });
-
-    server.begin();
-    serverStarted = true;
-
-    status = Status::RUNNING;
-  }
-
-  bool isLoggedIn() {
-    return server.authenticate(user.c_str(), pwd.c_str());
-}
-
-  void stopServer() {
-    if(serverStarted) {
-      server.close();
-      serverStarted = false;
+        lv_label_set_text(lv_label_create(btnSTA), "My Network");
     }
 
-    type = Type::IDLE;
-    status = Status::IDLE;
-  }
-
-  void onDestroy() override {
-    stopServer();
-  }
+    void onDestroy() override {
+      //  WebServerManager::get().stop();
+    }
 };

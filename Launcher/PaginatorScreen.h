@@ -21,6 +21,7 @@ private:
 
     lv_obj_t *titleLabel = nullptr;
     lv_obj_t *timeLabel = nullptr;
+    lv_obj_t *chargingLabel = nullptr;
     lv_obj_t *battery = nullptr;
     lv_obj_t *container = nullptr;
     lv_obj_t *pageLabel = nullptr;
@@ -33,6 +34,7 @@ private:
     lv_obj_t *connections;
     lv_obj_t *wifiConnection;
 
+    bool isCharging = false;
     bool wifiConnected = false;
 public:
     PaginatorScreen(const std::string &title, std::vector<MenuItem> items)
@@ -80,6 +82,18 @@ public:
         lv_obj_add_flag(wifiConnection, LV_OBJ_FLAG_HIDDEN);lv_obj_set_style_pad_left(wifiConnection, 8, 0);   // padding sinistro
         lv_obj_set_style_pad_right(wifiConnection, 8, 0);  // padding destro
 
+        lv_obj_t *headerRight = lv_obj_create(header);
+        lv_obj_remove_style_all(headerRight);
+        lv_obj_set_flex_flow(headerRight, LV_FLEX_FLOW_ROW);
+        lv_obj_set_size(headerRight, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+
+        chargingLabel = lv_label_create(headerRight);
+        lv_label_set_text(chargingLabel, LV_SYMBOL_CHARGE);
+        lv_obj_set_style_text_color(chargingLabel, lv_color_hex(0xFFFF00), 0);
+
+        if(!power.isCharging()) {
+            lv_obj_add_flag(chargingLabel, LV_OBJ_FLAG_HIDDEN);
+        }
         // Label batteria
         battery = lv_label_create(header);
         update();
@@ -155,6 +169,15 @@ public:
     void loop() override {
         RTC_DateTime datetime = rtc.getDateTime();
         int seconds = datetime.second;
+
+        if(power.isCharging() != isCharging) {
+            isCharging = power.isCharging();
+            if(isCharging) {
+                lv_obj_clear_flag(chargingLabel, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_add_flag(chargingLabel, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
 
         // Aggiorna all'inizio di ogni minuto
         if (seconds == 0 && (lastUpdate == 0 || millis() - lastUpdate >= 1000)) {
