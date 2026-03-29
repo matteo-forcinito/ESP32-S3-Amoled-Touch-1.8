@@ -26,7 +26,7 @@ public:
     virtual void onTouch(int32_t x, int32_t y, int32_t fingers) {}
     virtual void onLoop() {}
 
-    void loop() {
+    virtual void loop() {
         if(modal) {
             modal->loop();
         } else if(root) {
@@ -35,7 +35,7 @@ public:
     }
 
     // Crea la schermata e richiama onCreate()
-    void create() {
+    virtual void create() {
         root = lv_obj_create(NULL);
         lv_obj_set_width(root, lv_pct(100));
         lv_obj_set_height(root, lv_pct(100));

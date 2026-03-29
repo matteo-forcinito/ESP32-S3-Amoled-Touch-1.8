@@ -1,16 +1,13 @@
 #pragma once
 #include "Navigation.h"
 
-#include "FlashScreen.h"
-#include "MoodeScreen.h"
-#include "WifiQualityScreen.h"
-#include "WebServerScreen.h"
-#include "USBMSCScreen.h"
-#include "FileExplorerScreen.h"
+#include "ControlCenterScreen.h"
+#include "SetTimeNavigation.h"
+#include "AboutScreen.h"
 
-class SystemAppsNavigation : public Navigation {
+class SettingsNavigation : public Navigation {
 public:
-    const char *getTitle() const override { return "System Apps"; }
+    const char *getTitle() const override { return "Settings"; }
 
 
     static void onAppClick(lv_event_t *e, lv_event_cb_t originalCallback) {
@@ -48,40 +45,24 @@ public:
 
     std::vector<MenuItem> buildAppList() override {
         std::vector<MenuItem> appsList;
-
-        appsList.emplace_back("File Explorer", "S:/assets/icons/file-explorer.bin", [](lv_event_t *e) {
+        
+        appsList.emplace_back("Control Panel", "S:/assets/icons/control.bin", [](lv_event_t *e) {
             SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
-                ScreenManager::get().changeScreen(new FileExplorerScreen("/", "Home"));
+                ScreenManager::get().changeScreen(new ControlCenterScreen());
             });
         });
 
-        appsList.emplace_back("Torcia", "S:/assets/icons/flashlight.bin", [](lv_event_t *e) {
+        appsList.emplace_back("Set Time", "S:/assets/icons/clock.bin", [](lv_event_t *e) {
             SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
-                ScreenManager::get().changeScreen(new FlashScreen());
+                //ScreenManager::get().changeScreen(new SetTimeScreen());
+                SetTimeNavigation stn;
+                stn.open();
             });
         });
-
-        appsList.emplace_back("Wifi Quality", "S:/assets/icons/wifi.bin", [](lv_event_t *e) {
+        
+        appsList.emplace_back("About", "S:/assets/icons/about.bin", [](lv_event_t *e) {
             SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
-                ScreenManager::get().changeScreen(new WifiQualityScreen());
-            });
-        });
-
-        appsList.emplace_back("Web Server", "S:/assets/icons/webserver.bin", [](lv_event_t *e) {
-            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
-                ScreenManager::get().changeScreen(new WebServerScreen());
-            });
-        });
-
-        appsList.emplace_back("USB MSC", "S:/assets/icons/usb.bin", [](lv_event_t *e) {
-            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
-                ScreenManager::get().changeScreen(new USBMSCScreen());
-            });
-        });
-
-        appsList.emplace_back("moOde", "S:/assets/icons/moOde.bin", [](lv_event_t *e) {
-            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
-                ScreenManager::get().changeScreen(new MoodeScreen());
+                ScreenManager::get().changeScreen(new AboutScreen());
             });
         });
 

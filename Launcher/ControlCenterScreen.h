@@ -106,20 +106,6 @@ public:
     lv_obj_set_flex_flow(notifications, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_size(notifications, lv_pct(100), LV_SIZE_CONTENT);
 
-    lv_obj_t *bootTimeLabel = lv_label_create(notifications);
-
-    uint64_t s = esp_timer_get_time() / 1000000ULL;
-
-    uint32_t hours = s / 3600;
-    s %= 3600;
-
-    uint32_t minutes = s / 60;
-    uint32_t seconds = s % 60;
-
-    char buf[32];
-    sprintf(buf, "%02u:%02u:%02u", hours, minutes, seconds);
-    lv_label_set_text(bootTimeLabel, buf);
-
     btnWebServer = lv_obj_create(notifications);
     lv_obj_set_size(btnWebServer, lv_pct(100), LV_SIZE_CONTENT);
     lv_obj_add_flag(btnWebServer, LV_OBJ_FLAG_CLICKABLE);
