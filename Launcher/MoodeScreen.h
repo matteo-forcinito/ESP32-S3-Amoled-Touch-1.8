@@ -87,7 +87,7 @@ public:
         createUI();
     }
 
-    void loop() override {
+    void onLoop() override {
         if (!isConnected && !wifiRequested) {
             wifiRequested = true;
             //USBSerial.println("Connessione Al WiFi");

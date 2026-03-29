@@ -36,7 +36,7 @@ void ModeManager::toggleMode() {
 }
 
 void ModeManager::loop() {
-  if (active) active->loop();
+  if (active) active->onLoop();
 }
 
 ModeType ModeManager::current() { return activeType; }

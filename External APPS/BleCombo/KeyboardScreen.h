@@ -6,7 +6,7 @@ class KeyboardScreen : public BaseScreen {
 public:
   KeyboardScreen(BleManager *b);
   void enter() override;
-  void loop() override;
+  void onLoop() override;
   void exit() override;
 
 private:

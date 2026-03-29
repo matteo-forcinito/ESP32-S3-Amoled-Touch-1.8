@@ -117,7 +117,7 @@ void loop() {
   }
 
   // call mode manager loop
-  if (modeManager) modeManager->loop();
+  if (modeManager) modeManager->onLoop();
 
   delay(5);
 }

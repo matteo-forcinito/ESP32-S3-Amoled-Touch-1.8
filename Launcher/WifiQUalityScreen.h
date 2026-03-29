@@ -52,7 +52,7 @@ lv_obj_set_flex_align(textContainer,
       updateTime = millis();
     }
 
-    void loop() override {
+    void onLoop() override {
       if(!ready || millis() - updateTime < 500) return;
       updateTime = millis();
 

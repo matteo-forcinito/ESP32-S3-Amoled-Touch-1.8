@@ -67,7 +67,7 @@ public:
         WifiManager::begin();
     }
 
-    void loop() override {
+    void onLoop() override {
         WifiManager::State state = WifiManager::getState();
         if(lastState == state) {
             if(state == WifiManager::State::CONNECTING) {

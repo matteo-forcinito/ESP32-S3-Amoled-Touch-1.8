@@ -63,9 +63,9 @@ public:
     lv_label_set_text(lbl, "Riproduzione radio...");
   }
 
-  void loop() override {
+  void onLoop() override {
     if (mp3 && mp3->isRunning()) {
-      if (!mp3->loop()) {
+      if (!mp3->onLoop()) {
         mp3->stop();
       }
     }

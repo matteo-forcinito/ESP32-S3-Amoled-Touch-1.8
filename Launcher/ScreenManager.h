@@ -30,7 +30,7 @@ public:
     }
 
     void loop() {
-        if (current) current->loop();
+        if (current) current->onLoop();
     }
 
     void touch(int32_t x, int32_t y, int32_t fingers) {

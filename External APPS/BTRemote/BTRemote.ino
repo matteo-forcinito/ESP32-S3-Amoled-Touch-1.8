@@ -141,7 +141,7 @@ void loop() {
     buttonPressedTime = millis();
   }
 
-  sm.loop();
+  sm.onLoop();
 
   int32_t x = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::TOUCH_COORDINATE_X);
   int32_t y = FT3168->IIC_Read_Device_Value(FT3168->Arduino_IIC_Touch::TOUCH_COORDINATE_Y);

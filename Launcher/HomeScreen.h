@@ -98,7 +98,7 @@ public:
       loadAppList();
     }
 
-    void loop() override {
+    void onLoop() override {
       if(lastUpdate == 0 || millis() - lastUpdate > 50000) {
         struct tm timeinfo;
         if (getLocalTime(&timeinfo)) {

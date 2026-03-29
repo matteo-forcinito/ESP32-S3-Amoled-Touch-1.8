@@ -166,7 +166,7 @@ public:
         renderPage();
     }
 
-    void loop() override {
+    void onLoop() override {
         RTC_DateTime datetime = rtc.getDateTime();
         int seconds = datetime.second;
 

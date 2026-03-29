@@ -22,7 +22,13 @@ public:
     virtual void onDestroy() {}    // opzionale
     virtual void onShow() {}       // quando la schermata è caricata
     virtual void onTouch(int32_t x, int32_t y, int32_t fingers) {}
-    virtual void loop() {}
+    virtual void onLoop() {}
+
+    void loop() {
+        if(root) {
+            onLoop();
+        }
+    }
 
     // Crea la schermata e richiama onCreate()
     void create() {

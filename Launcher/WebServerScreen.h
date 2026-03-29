@@ -19,7 +19,7 @@ public:
         createButtons();
     }
 
-    void loop() override {
+    void onLoop() override {
         auto& ws = WebServerManager::get();
         ws.loop();
 

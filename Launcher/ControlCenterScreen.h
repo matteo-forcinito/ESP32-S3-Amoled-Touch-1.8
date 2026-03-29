@@ -191,7 +191,7 @@ public:
     return btn;
   }
 
-  void loop() override {
+  void onLoop() override {
     bool wsRunning = WebServerManager::get().getStatus() == WebServerManager::Status::RUNNING;
     if(webServerRunning != wsRunning) {
       webServerRunning = wsRunning;

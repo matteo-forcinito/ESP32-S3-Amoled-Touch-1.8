@@ -7,7 +7,7 @@ class TouchpadScreen : public BaseScreen {
 public:
   TouchpadScreen(BleManager *b);
   void enter() override;
-  void loop() override;
+  void onLoop() override;
   void exit() override;
 
 private:
