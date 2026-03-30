@@ -1,5 +1,7 @@
 #pragma once
 #include "AppScreenLayout.h"
+#include <SD_MMC.h>
+#include "AlarmManager.h"
 
 #include "esp_system.h"
 #include "esp_chip_info.h"
@@ -13,6 +15,19 @@ public:
   AboutScreen() : AppScreenLayout("About") {}
 
   void onCreate() override {
+
+    lv_obj_t *c = lv_obj_create(container);
+    lv_obj_set_size(c, lv_pct(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(c, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_all(c, 10, 0);
+
+    lv_obj_t *l = lv_label_create(c);
+    lv_label_set_text(l, "Delete alarms");
+    lv_obj_add_event_cb(c, [](lv_event_t *e) {
+        SD_MMC.remove("/alarms.json");
+        AlarmManager::load();
+    }, LV_EVENT_CLICKED, NULL);
+
 
       auto createSection = [&](const char* title) {
           lv_obj_t *c = lv_obj_create(container);

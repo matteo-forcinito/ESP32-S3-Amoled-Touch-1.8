@@ -6,13 +6,22 @@
 #include "pin_config.h"
 #include "esp_ota_ops.h"
 #include "esp_system.h"
+extern "C" {
+  #include "driver/i2s_std.h"
+}
+#include "ESP_I2S.h"
 #include "SensorPCF85063.hpp"
 #include "XPowersLib.h"
 #include <esp_sleep.h>
+#include "SDManager.h"
 #include "AlwaysOnScreen.h"
 #include "LauncherScreen.h"
 #include "SimpleScreen.h"
+#include "AlarmManager.h"
+#include "AlarmTriggerScreen.h"
 
+#include "HWCDC.h"
+HWCDC USBSerial;
 // --- Display (SH8601 QSPI) ---
 Arduino_DataBus *bus = new Arduino_ESP32QSPI(
   LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
@@ -20,10 +29,13 @@ Arduino_GFX *gfx = new Arduino_SH8601(bus, -1, 0, false, LCD_WIDTH, LCD_HEIGHT);
 
 // --- Touch FT3168 (I2C) ---
 // Uses Arduino_FT3x68 class from Arduino_DriveBus_Library
+I2SClass i2s;
 std::shared_ptr<Arduino_IIC_DriveBus> IIC_Bus;
 std::unique_ptr<Arduino_FT3x68> FT3168;
 SensorPCF85063 rtc;
 XPowersPMU power;
+SemaphoreHandle_t g_sdMutex;
+SDManager sdManager;
 bool isAlwaysOn = false;
 unsigned long bootTime = 0;
 SimpleScreen* openApp = nullptr;
@@ -34,9 +46,9 @@ bool backToLaucher = false;
 
 // --- SETUP ---
 void setup() {
-  Serial.begin(115200);
+  USBSerial.begin(115200);
   pinMode(0, INPUT_PULLUP);
-  Serial.println("Starting...");
+  USBSerial.println("Starting...");
 
   // I2C for touch
   Wire.begin(IIC_SDA, IIC_SCL);
@@ -62,18 +74,26 @@ void setup() {
     }
   }
 
+  g_sdMutex = xSemaphoreCreateMutex();
+  if(!sdManager.init()) {
+    //USBSerial.println("Cannot Mound Card");
+  } else {
+    //USBSerial.println("Card Mounted");
+  }
+
   configTime(0, 0, "pool.ntp.org");
   setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
   tzset();
   
+  AlarmManager::load();
+
   gfx->setTextColor(0x03E0); // 0x0320  0x03E0  0x0200
-  
   launcher->create();
 
 }
-
 // --- LOOP ---
 void loop() {
+  checkAlarms();
   if(backToLaucher) {
     backToLaucher = false;
     gfx->fillScreen(BLACK);
@@ -99,11 +119,7 @@ void loop() {
 
     if(wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
       //Wire.begin(IIC_SDA, IIC_SCL); // riattiva touch
-      setCpuFrequencyMhz(240);
-      isAlwaysOn = false;
-      gfx->Display_Brightness(140);
-      delay(1000);
-      alwaysOnScreen.create();
+      exitAlwaysOn();
       //AudioManager::ampOn();
 
       return;
@@ -119,6 +135,7 @@ void loop() {
   }
   if(digitalRead(0) == HIGH && bootTime != 0) {
     if(openApp != nullptr) {
+      openApp->onDestroy();
       delete openApp;
       openApp = nullptr;
     }
@@ -146,6 +163,43 @@ void loop() {
   } else {
     launcher->touch(x, y, fingers);
   }
+}
+
+void checkAlarms() {
+  time_t now = time(nullptr);
+  static uint32_t lastTriggeredId = 0;
+
+  uint32_t idx = AlarmManager::checkAlarms(now);
+  if (idx != -1) {
+    const Alarm* a = AlarmManager::getById(idx);
+
+    if (a && a->id != lastTriggeredId) {
+      if(isAlwaysOn) {
+        setCpuFrequencyMhz(240);
+        isAlwaysOn = false;
+        gfx->Display_Brightness(140);
+      }
+
+      lastTriggeredId = a->id;
+      
+      if (openApp) {
+        openApp->onDestroy();
+        delete openApp;
+        openApp = nullptr;
+      }
+
+      openApp = new AlarmTriggerScreen(a->id);
+      openApp->create();
+    }
+  }
+}
+
+void exitAlwaysOn() {
+  setCpuFrequencyMhz(240);
+  isAlwaysOn = false;
+  gfx->Display_Brightness(140);
+  delay(1000);
+  alwaysOnScreen.create();
 }
 
 void returnToLauncher() {

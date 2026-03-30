@@ -2,6 +2,8 @@
 #include "FS.h"
 #include "SD_MMC.h"
 
+#include "HWCDC.h"
+
 // Definizione variabili statiche
 std::vector<Alarm> AlarmManager::alarms;
 const char* AlarmManager::FILE_PATH = "/alarms.json";

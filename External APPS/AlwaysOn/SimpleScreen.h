@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utils.h"
+
 extern Arduino_GFX *gfx;
 extern SensorPCF85063 rtc;
 extern XPowersPMU power;

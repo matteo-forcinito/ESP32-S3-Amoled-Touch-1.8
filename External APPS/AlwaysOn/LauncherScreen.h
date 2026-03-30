@@ -4,6 +4,7 @@
 #include "FlashScreen.h"
 #include "SettingsScreen.h"
 #include "QMIScreen.h"
+#include "WebServerScreen.h"
 
 struct AppItem {
   const char* name;
@@ -11,6 +12,7 @@ struct AppItem {
 };
 
 SimpleScreen* createClock() { return new AlwaysOnScreen(); }
+SimpleScreen* createWebServer() { return new WebServerScreen(); }
 SimpleScreen* createHelloWorld() { return new HelloWorldScreen(); }
 SimpleScreen* createFlash() { return new FlashScreen(); }
 SimpleScreen* createSettings() { return new SettingsScreen(); }
@@ -19,6 +21,7 @@ SimpleScreen* createQMI() { return new QMIScreen(); }
 AppItem apps[] = {
   { "Clock", createClock },
   { "QMI", createQMI },
+  { "WebServer", createWebServer },
   { "Hello World", createHelloWorld },
   { "Flash", createFlash },
   { "Settings", createSettings }
@@ -90,6 +93,7 @@ private:
 
   void launchApp(int index) {
     if (openApp) {
+      openApp->onDestroy();
       delete openApp;
       openApp = nullptr;
     }
