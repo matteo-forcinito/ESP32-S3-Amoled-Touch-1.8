@@ -17,11 +17,11 @@
 #include "ScreenManager.h"
 #include "HomeScreen.h"
 #include "AppState.h"
-
+#include "AlarmTriggerScreen.h"
 #include "lv_fs_sd.h"
 
 #include "HomeNavigation.h"
-//#include "AudioManager.h"
+#include "AudioManager.h"
 extern "C" {
   #include "driver/i2s_std.h"
 }
@@ -31,6 +31,8 @@ I2SClass i2s;
 #include "esp_check.h"
 #include "es8311.h"
 #include "canon.h"
+
+#include "AlarmManager.h"
 
 #define EXAMPLE_SAMPLE_RATE 16000
 #define EXAMPLE_VOICE_VOLUME 80                  // 0 - 100
@@ -73,6 +75,8 @@ int brightness = 120;
 HomeNavigation home;
 SemaphoreHandle_t g_sdMutex;
 bool isCharging = false;
+bool alarmSet = false;
+unsigned long alarmSetTime = 0;
 
 #define LVGL_TICK_PERIOD_MS 2
 
@@ -112,6 +116,32 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
 
 }
 
+void checkAlarms() {
+  if(alarmSet) {
+    if(alarmSetTime == 0) {
+      alarmSetTime = millis();
+    } else if(millis() - alarmSetTime > 10000) {
+      alarmSet = false;
+      alarmSetTime = 0;
+    }
+
+    return;
+  }
+  time_t now = time(nullptr);
+  static uint32_t lastTriggeredId = 0;
+
+  uint32_t idx = AlarmManager::checkAlarms(now);
+  if (idx != -1) {
+      const Alarm* a = AlarmManager::getById(idx);
+
+      if (a && a->id != lastTriggeredId) {
+          if(isAlwaysOn) exitAlwaysOn();
+
+          lastTriggeredId = a->id;
+          ScreenManager::get().openModal(new AlarmTriggerScreen(a->id));
+      }
+  }
+}
 
 
 void alwaysOn() {
@@ -141,6 +171,21 @@ void alwaysOn() {
     gfx->setCursor(100, 200);
     gfx->println("Charging");
   }
+}
+
+void exitAlwaysOn() {
+  //Wire.begin(IIC_SDA, IIC_SCL); // riattiva touch
+  setCpuFrequencyMhz(240);
+  isAlwaysOn = false;
+  gfx->Display_Brightness(brightness);
+  delay(1000);
+  // Forza LVGL a ridisegnare lo screen principale
+  //lv_obj_t *scr = lv_scr_act();
+  //lv_obj_clean(scr);      // cancella vecchi oggetti
+  home.open();
+  //screenManager.changeScreen(new HomeScreen());
+  lv_timer_handler();
+  //AudioManager::ampOn();
 }
 
 void setup() {
@@ -182,6 +227,8 @@ void setup() {
       delay(1000);
     }
   }
+
+  //AudioManager::init();
 
   configTime(0, 0, "pool.ntp.org");
   setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
@@ -238,6 +285,7 @@ void setup() {
 void loop() {
   ScreenManager screenManager = ScreenManager::get();
 
+  checkAlarms();
   if(power.isCharging() != isCharging) {
     isCharging = power.isCharging();
   }
@@ -266,18 +314,7 @@ void loop() {
     
 
     if(wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) {
-      //Wire.begin(IIC_SDA, IIC_SCL); // riattiva touch
-      setCpuFrequencyMhz(240);
-      isAlwaysOn = false;
-      gfx->Display_Brightness(brightness);
-      delay(1000);
-      // Forza LVGL a ridisegnare lo screen principale
-      lv_obj_t *scr = lv_scr_act();
-      lv_obj_clean(scr);      // cancella vecchi oggetti
-      home.open();
-      //screenManager.changeScreen(new HomeScreen());
-      lv_timer_handler();
-      //AudioManager::ampOn();
+      exitAlwaysOn();
 
       return;
     } 
@@ -317,6 +354,8 @@ void loop() {
     // actually disabled due to a bad feedback sound
     // AudioManager::playTap();
     touchLastTime = millis();
+    AudioManager::stopAlarm();
+    AudioManager::deinit();
   } else if(touchLastTime == 0 && screenManager.getCurrent()->getId() == APP_HOME) {
     touchLastTime = millis();
   }

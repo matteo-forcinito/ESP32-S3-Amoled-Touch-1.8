@@ -7,6 +7,7 @@
 #include "WebServerScreen.h"
 #include "USBMSCScreen.h"
 #include "FileExplorerScreen.h"
+#include "MeteoScreen.h"
 
 class SystemAppsNavigation : public Navigation {
 public:
@@ -48,6 +49,12 @@ public:
 
     std::vector<MenuItem> buildAppList() override {
         std::vector<MenuItem> appsList;
+
+        appsList.emplace_back("Meteo", "S:/assets/icons/weather.bin", [](lv_event_t *e) {
+            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
+                ScreenManager::get().changeScreen(new MeteoScreen());
+            });
+        });
 
         appsList.emplace_back("File Explorer", "S:/assets/icons/file-explorer.bin", [](lv_event_t *e) {
             SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){

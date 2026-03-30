@@ -2,6 +2,10 @@
 #include <lvgl.h>
 #include <Arduino.h>
 
+static uint32_t generateId() {
+    return (uint32_t)time(nullptr) ^ esp_random();
+}
+
 struct MboxContext {
     lv_obj_t *mbox;
     String *appName;
@@ -20,6 +24,32 @@ struct WifiNetwork {
     int32_t rssi;
     bool saved = false;
     bool connected = false;
+};
+
+
+
+struct Alarm {
+    uint32_t id;
+    int hour;
+    int minute;
+
+    uint32_t startEpoch;
+    uint8_t recurrence;
+    uint16_t interval;
+
+    String title;
+    String description;
+
+    bool enabled;
+};
+
+enum class Recurrence {
+    NONE = 0,
+    MINUTES,
+    HOURS,
+    DAYS,
+    WEEKS,
+    MONTHS
 };
 
 struct FileEntry {

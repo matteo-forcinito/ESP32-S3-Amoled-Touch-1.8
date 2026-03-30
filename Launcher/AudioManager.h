@@ -17,11 +17,26 @@ public:
     static void unmute();
 
     static void playTap();   // feedback breve
+    // nuova versione non bloccante
+    static void startAlarm();
+    static void stopAlarm();
+    static void update(); // da chiamare ogni loop()
 
     static void ampOn();
     static void ampOff();
 
+    static void alarmTask(void* param);
+
 private:
     static bool initialized;
     static uint8_t volume;
+    static bool alarmPlaying;
+    static uint16_t alarmDuration; // secondi
+    static uint32_t alarmStartMillis;
+    static int sampleIndex;
+    static const int freq = 1000;
+    static const int sampleRate = 16000;
+    static const int amplitude = 2000;
+    static TaskHandle_t alarmTaskHandle;
+    static bool alarmRunning;
 };

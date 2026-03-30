@@ -1,5 +1,6 @@
 #include "WebServerManager.h"
 #include "WifiManager.h"
+#include "AlarmManager.h"
 
 void WebServerManager::startAP(const String& ssid, const String& pwd) {
     if (serverStarted) return;
@@ -33,7 +34,8 @@ void WebServerManager::setupServer() {
 
         String page = "<h1>Benvenuto!</h1>";
         page += "<p>Il tuo IP: " + server.client().remoteIP().toString() + "</p>";
-        page += "<a href='/addNetwork'> Configure WiFi </a>";
+        page += "<a href='/addNetwork'> Configure WiFi </a></hr>";
+        page += "<a href='/addAlarm'> Configure Alarm </a></hr>";
 
         server.send(200, "text/html", page);
     });
@@ -77,6 +79,47 @@ void WebServerManager::setupServer() {
         server.send(200, "text/html", page);
 
         wm.connect(ssid, pwd);
+    });
+
+    // ------------------ Aggiungi pagina /addAlarm ------------------
+    server.on("/addAlarm", [this]() {
+        if (!isLoggedIn()) return server.requestAuthentication();
+
+        String page = "<h1>Aggiungi nuova sveglia</h1>";
+        page += "<form method='POST' action='/saveAlarm'>";
+        page += "Ora: <input type='number' name='hour' min='0' max='23'><br>";
+        page += "Minuto: <input type='number' name='minute' min='0' max='59'><br>";
+        page += "Titolo: <input type='text' name='title'><br>";
+        page += "Descrizione: <input type='text' name='description'><br>";
+        page += "<label>Abilitata: <input type='checkbox' name='enabled' checked></label><br>";
+        page += "<button type='submit'>Salva</button>";
+        page += "</form>";
+        page += "<a href='/'>Torna alla home</a>";
+
+        server.send(200, "text/html", page);
+    });
+
+    // ------------------ Salvataggio sveglia ------------------
+    server.on("/saveAlarm", HTTP_POST, [this]() {
+        if (!isLoggedIn()) return server.requestAuthentication();
+
+        Alarm a;
+        a.hour = server.arg("hour").toInt();
+        a.minute = server.arg("minute").toInt();
+        a.startEpoch = time(nullptr); // ora corrente
+        a.recurrence = (uint8_t)Recurrence::DAYS; // per ora giornaliera
+        a.interval = 1;
+        a.title = server.arg("title");
+        a.description = server.arg("description");
+        a.enabled = server.arg("enabled") == "on";
+
+        AlarmManager::add(a);
+
+        String page = "<h1>Sveglia salvata!</h1>";
+        page += "<p>" + a.title + " alle " + String(a.hour) + ":" + String(a.minute) + "</p>";
+        page += "<a href='/'>Torna alla home</a>";
+
+        server.send(200, "text/html", page);
     });
 
     server.begin();

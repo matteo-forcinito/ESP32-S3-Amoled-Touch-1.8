@@ -66,7 +66,7 @@ public:
             delete app;
           }
           lv_timer_del(timer); // elimina il timer
-        }, 500, old);
+        }, 50, old);
     }
 
     // Mostra questa schermata

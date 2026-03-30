@@ -1,6 +1,7 @@
 #pragma once
 #include "Navigation.h"
 
+#include "AlarmScreen.h"
 #include "ControlCenterScreen.h"
 #include "SetTimeNavigation.h"
 #include "AboutScreen.h"
@@ -45,6 +46,12 @@ public:
 
     std::vector<MenuItem> buildAppList() override {
         std::vector<MenuItem> appsList;
+        
+        appsList.emplace_back("Alarm", "S:/assets/icons/alarm-clock.bin", [](lv_event_t *e) {
+            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
+                ScreenManager::get().changeScreen(new AlarmScreen());
+            });
+        });
         
         appsList.emplace_back("Control Panel", "S:/assets/icons/control.bin", [](lv_event_t *e) {
             SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
