@@ -274,6 +274,7 @@ void setup() {
   esp_timer_start_periodic(periodic_timer, LVGL_TICK_PERIOD_MS * 1000);
 
   AlarmManager::load();
+  AlarmManager::initPreferences();
   //ScreenManager::get().changeScreen(new HomeScreen());
   home.open();
 }

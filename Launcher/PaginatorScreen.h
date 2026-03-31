@@ -3,6 +3,7 @@
 #include "MenuItem.h"
 #include <vector>
 #include <string>
+#include "esp_heap_caps.h"
 #include "SDManager.h"
 
 #include "ControlCenterScreen.h"
@@ -28,6 +29,7 @@ private:
     lv_obj_t *btnPrev = nullptr;
     lv_obj_t *btnNext = nullptr;
     lv_obj_t *footer = nullptr;
+    lv_obj_t *lblRam = nullptr;
 
     unsigned long lastUpdate = 0;
 
@@ -36,6 +38,21 @@ private:
 
     bool isCharging = false;
     bool wifiConnected = false;
+
+    String getRamUsage() {
+        size_t freeHeap = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
+        size_t totalHeap = heap_caps_get_total_size(MALLOC_CAP_DEFAULT);
+        size_t usedHeap = totalHeap - freeHeap;
+
+        char buf[64];
+        sprintf(buf, "%dKB / %dKB (%d%%)",
+            usedHeap / 1024,
+            totalHeap / 1024,
+            (usedHeap * 100) / totalHeap
+        );
+
+        return String(buf);
+    }
 public:
     PaginatorScreen(const std::string &title, std::vector<MenuItem> items)
       : title(title), items(std::move(items)) {}
@@ -76,6 +93,15 @@ public:
         lv_obj_set_flex_flow(connections, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_grow(connections, 1);
         lv_obj_set_height(connections, LV_SIZE_CONTENT);
+        lv_obj_set_flex_align(
+            connections,
+            LV_FLEX_ALIGN_CENTER,   // orizzontale
+            LV_FLEX_ALIGN_CENTER,  // verticale
+            LV_FLEX_ALIGN_CENTER   // allineamento contenuto
+        );
+
+        lblRam = lv_label_create(connections);
+        lv_label_set_text(lblRam, getRamUsage().c_str());
 
         wifiConnection = lv_label_create(connections);
         lv_label_set_text(wifiConnection, LV_SYMBOL_WIFI);
@@ -216,6 +242,7 @@ public:
 
         int batteryPercent = power.getBatteryPercent();
         lv_label_set_text_fmt(battery, "%d%%", batteryPercent);
+        lv_label_set_text(lblRam, getRamUsage().c_str());
     }
 
 private:

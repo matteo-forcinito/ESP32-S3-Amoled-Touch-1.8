@@ -8,12 +8,17 @@ private:
   String title; 
 
   bool isCharging = false;
+  bool wifiConnected = false;
   unsigned long lastUpdate = 0;
 
   lv_obj_t *titleLabel = nullptr;
   lv_obj_t *timeLabel = nullptr;
   lv_obj_t *chargingLabel = nullptr;
   lv_obj_t *battery = nullptr;
+  lv_obj_t *lblRam = nullptr;
+
+  lv_obj_t *connections;
+  lv_obj_t *wifiConnection;
 
   void update() {
     RTC_DateTime datetime = rtc.getDateTime();
@@ -29,7 +34,23 @@ private:
 
     int batteryPercent = power.getBatteryPercent();
     lv_label_set_text_fmt(battery, "%d%%", batteryPercent);
+    lv_label_set_text(lblRam, getRamUsage().c_str());
     lastUpdate = millis();
+  }
+
+  String getRamUsage() {
+      size_t freeHeap = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
+      size_t totalHeap = heap_caps_get_total_size(MALLOC_CAP_DEFAULT);
+      size_t usedHeap = totalHeap - freeHeap;
+
+      char buf[64];
+      sprintf(buf, "%dKB / %dKB (%d%%)",
+          usedHeap / 1024,
+          totalHeap / 1024,
+          (usedHeap * 100) / totalHeap
+      );
+
+      return String(buf);
   }
 public:
   AppScreenLayout(const String& title = String("No Title")) : title(title) {}
@@ -46,6 +67,14 @@ public:
       }
       if(lastUpdate != 0 && (millis() - lastUpdate > 1000)) {
         update();
+      }
+      if(WiFi.getMode() != WIFI_MODE_NULL && !wifiConnected) {
+          lv_obj_clear_flag(wifiConnection, LV_OBJ_FLAG_HIDDEN);
+          wifiConnected = true;
+      }
+      if(WiFi.getMode() == WIFI_MODE_NULL && wifiConnected) {
+          lv_obj_add_flag(wifiConnection, LV_OBJ_FLAG_HIDDEN);
+          wifiConnected = false;
       }
     }
     AppScreen::loop();
@@ -81,6 +110,21 @@ public:
       }, LV_EVENT_CLICKED, NULL);
   */
       timeLabel = lv_label_create(header);
+
+      connections = lv_obj_create(header);
+      lv_obj_remove_style_all(connections);
+      lv_obj_set_flex_flow(connections, LV_FLEX_FLOW_ROW);
+      lv_obj_set_flex_grow(connections, 1);
+      lv_obj_set_height(connections, LV_SIZE_CONTENT);
+      lv_obj_set_flex_align(
+          connections,
+          LV_FLEX_ALIGN_CENTER,   // orizzontale
+          LV_FLEX_ALIGN_CENTER,  // verticale
+          LV_FLEX_ALIGN_CENTER   // allineamento contenuto
+      );
+
+      lblRam = lv_label_create(connections);
+      lv_label_set_text(lblRam, getRamUsage().c_str());
 
       lv_obj_t *headerRight = lv_obj_create(header);
       lv_obj_remove_style_all(headerRight);
