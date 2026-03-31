@@ -34,8 +34,9 @@ void WebServerManager::setupServer() {
 
         String page = "<h1>Benvenuto!</h1>";
         page += "<p>Il tuo IP: " + server.client().remoteIP().toString() + "</p>";
-        page += "<a href='/addNetwork'> Configure WiFi </a></hr>";
-        page += "<a href='/addAlarm'> Configure Alarm </a></hr>";
+        page += "<a href='/addNetwork'><button> Configure WiFi </button></a></hr>";
+        page += "<a href='/addAlarm'><button> Configure Alarm </button></a></hr>";
+        page += "<a href='/setTime'><button> Set Time </button></a></hr>";
 
         server.send(200, "text/html", page);
     });

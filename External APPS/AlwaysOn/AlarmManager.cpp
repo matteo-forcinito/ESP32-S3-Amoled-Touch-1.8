@@ -9,8 +9,9 @@ uint32_t AlarmManager::id = 0;
 Alarm AlarmManager::systemAlarms[] = {
     {1000001, 8, 30, 0, 0, 1, "Wake up", "System alarm", true},
     {1000002, 22, 0, 0, 0, 1, "Sleep", "System alarm", true},
-    {1000002, 01, 05, 0, 0, 1, "Sleep", "System alarm", true},
-    {1000002, 01, 10, 0, 0, 1, "Sleep", "System alarm", true}
+    {1000003, 01, 35, 0, 0, 1, "Sleep", "System alarm", true},
+    {1000004, 01, 45, 0, 0, 1, "Sleep", "System alarm", true},
+    {1000006, 01, 55, 0, 0, 1, "Sleep", "System alarm", true}
 };
 
 const size_t AlarmManager::systemAlarmCount =
