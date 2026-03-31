@@ -87,6 +87,7 @@ void setup() {
   tzset();
   
   AlarmManager::load();
+  AlarmManager::initPreferences();
 
   gfx->setTextColor(0x03E0); // 0x0320  0x03E0  0x0200
   launcher->create();
@@ -166,6 +167,7 @@ void loop() {
   }
 }
 
+
 void checkAlarms() {
   time_t now = time(nullptr);
 
@@ -179,17 +181,17 @@ void checkAlarms() {
         USBSerial.printf("idx = %s", String(idx));
       }
       if (a && a->id != lastTriggeredId) {
-        if(isAlwaysOn) exitAlwaysOn();
+          if(isAlwaysOn) exitAlwaysOn();
 
-        lastTriggeredId = a->id;
-        if (openApp) {
-          openApp->onDestroy();
-          delete openApp;
-          openApp = nullptr;
-        }
+          lastTriggeredId = a->id;
+          if (openApp) {
+            openApp->onDestroy();
+            delete openApp;
+            openApp = nullptr;
+          }
 
-        openApp = new AlarmTriggerScreen(a->id);
-        openApp->create();
+          openApp = new AlarmTriggerScreen(a->id);
+          openApp->create();
       }
   }
 }
