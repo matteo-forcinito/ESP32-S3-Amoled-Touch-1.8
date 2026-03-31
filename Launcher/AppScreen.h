@@ -61,13 +61,15 @@ public:
         create();
         show();
         
-        lv_timer_t * t = lv_timer_create([](lv_timer_t * timer) {
-          AppScreen* app = (AppScreen*) timer->user_data;
-          if(app) {
-            delete app;
-          }
-          lv_timer_del(timer); // elimina il timer
-        }, 50, old);
+        if(old) {
+            old->destroy();  // ⚠️ solo LVGL objects
+
+            // defer delete DOPO che LVGL ha finito
+            lv_async_call([](void *data) {
+                AppScreen* app = static_cast<AppScreen*>(data);
+                delete app;
+            }, old);
+        }
     }
 
     // Mostra questa schermata

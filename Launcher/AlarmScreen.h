@@ -37,13 +37,13 @@ public:
         for (size_t i = 0; i < AlarmManager::getSystemAlarmCount(); i++) {
             createAlarmItemSystem(AlarmManager::getSystemAlarm(i));
         }
-
+/*
         if (alarms.empty()) {
             lv_obj_t* empty = lv_label_create(list);
             lv_label_set_text(empty, "No alarms");
             return;
         }
-
+*/
         for (size_t i = 0; i < alarms.size(); i++) {
             createAlarmItem(i, alarms[i]);
         }

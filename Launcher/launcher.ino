@@ -121,14 +121,8 @@ void checkAlarms() {
   time_t now = time(nullptr);
 
   uint32_t idx = AlarmManager::checkAlarms(now);
-  USBSerial.print("idx = ");
-  USBSerial.println(String(idx));
   if (idx != 0) {
       const Alarm* a = AlarmManager::getById(idx);
-      if(a) {
-        USBSerial.printf("id = %s", String(a->id));
-        USBSerial.printf("idx = %s", String(idx));
-      }
       if (a && a->id != lastTriggeredId) {
           if(isAlwaysOn) exitAlwaysOn();
 
@@ -280,6 +274,7 @@ void setup() {
 }
 
 void loop() {
+  lv_timer_handler();
   ScreenManager screenManager = ScreenManager::get();
 
   checkAlarms();
@@ -325,9 +320,9 @@ void loop() {
   if(backHome) {
       backHome = false;
       home.open();
-      lv_timer_handler();
+      return;
+      //lv_timer_handler();
   }
-  lv_timer_handler();
   if(digitalRead(0) == LOW && bootPressedTime == 0) {
     bootPressedTime = millis();
   }

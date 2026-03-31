@@ -18,15 +18,16 @@ public:
         if (current) {  
             current->create();
             current->show();
+            if(old) {
+                old->destroy();  // ⚠️ solo LVGL objects
+
+                // defer delete DOPO che LVGL ha finito
+                lv_async_call([](void *data) {
+                    AppScreen* app = static_cast<AppScreen*>(data);
+                    delete app;
+                }, old);
+            }
         }
-        lv_timer_t * t = lv_timer_create([](lv_timer_t * timer) {
-          AppScreen* app = (AppScreen*) timer->user_data;
-          if(app) {
-            //app->destroy();
-            delete app;
-          }
-          lv_timer_del(timer); // elimina il timer
-        }, 50, old);
     }
 
     void openModal(AppScreen *app) {

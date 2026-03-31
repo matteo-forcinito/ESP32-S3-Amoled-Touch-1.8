@@ -204,6 +204,10 @@ public:
     }
   }
 
+  void onDestroy() override {
+    if(file) file.close();
+  }
+
   void loadNextChunk() {
     if(!file) return;
 

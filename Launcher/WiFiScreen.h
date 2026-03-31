@@ -15,6 +15,13 @@ private:
     unsigned long connectingTime = 0;
 
     WifiManager::State lastState = WifiManager::State::IDLE;
+
+    struct NetworkEventData {
+        String ssid;
+        String pwd;
+    };
+
+    std::vector<NetworkEventData> networkEventData;
 public:
     void onCreate() override {
         lv_obj_set_flex_flow(root, LV_FLEX_FLOW_COLUMN);
@@ -107,7 +114,12 @@ public:
                 }
                 lv_obj_t *lblNetworkSize = lv_label_create(results);
                 lv_label_set_text_fmt(lblNetworkSize, "found %d networks", networks.size());
+networkEventData.clear(); // pulisci i vecchi dati
+networkEventData.reserve(networks.size()); // ottimizza il vector
                 for(const WifiNetwork &network : networks) {
+    networkEventData.push_back({network.ssid, network.pwd});
+    NetworkEventData* ptr = &networkEventData.back();
+
                     lv_obj_t *networkContainer = lv_obj_create(results);
                     lv_obj_set_flex_flow(networkContainer, LV_FLEX_FLOW_COLUMN);
                     lv_obj_set_size(networkContainer, lv_pct(100), LV_SIZE_CONTENT);
@@ -121,12 +133,12 @@ public:
                     if(network.saved) {
                         lv_obj_t *lblSaved = lv_label_create(networkContainer);
                         lv_label_set_text(lblSaved, "SAVED");
-                    }
-
+                    }    // crea copia stabile in heap
+                    
                     lv_obj_add_event_cb(networkContainer, [](lv_event_t *e) {
-                        WifiNetwork *network = (WifiNetwork*) lv_event_get_user_data(e);
-                        WifiManager::connect(network->ssid, network->pwd);
-                    }, LV_EVENT_CLICKED, (void*)&network);
+                        NetworkEventData* d = (NetworkEventData*) lv_event_get_user_data(e);
+                        WifiManager::connect(d->ssid, d->pwd);
+                    }, LV_EVENT_CLICKED, ptr);
                 }
             break;
             }
@@ -160,7 +172,12 @@ public:
                 }
                 lv_obj_t *lblNetworkSize = lv_label_create(results);
                 lv_label_set_text_fmt(lblNetworkSize, "found %d networks", networks.size());
+networkEventData.clear(); // pulisci i vecchi dati
+networkEventData.reserve(networks.size()); // ottimizza il vector
                 for(const WifiNetwork &network : networks) {
+    networkEventData.push_back({network.ssid, network.pwd});
+    NetworkEventData* ptr = &networkEventData.back();
+    
                     lv_obj_t *networkContainer = lv_obj_create(results);
                     lv_obj_set_flex_flow(networkContainer, LV_FLEX_FLOW_COLUMN);
                     lv_obj_set_size(networkContainer, lv_pct(100), LV_SIZE_CONTENT);
@@ -184,7 +201,7 @@ public:
                     lv_obj_add_event_cb(networkContainer, [](lv_event_t *e) {
                         WifiNetwork *network = (WifiNetwork*) lv_event_get_user_data(e);
                         WifiManager::connect(network->ssid, network->pwd);
-                    }, LV_EVENT_CLICKED, (void*)&network);
+                    }, LV_EVENT_CLICKED, ptr);
                 }
 
             break;

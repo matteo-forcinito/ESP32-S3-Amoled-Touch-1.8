@@ -67,6 +67,12 @@ public:
         gfx->Display_Brightness(value);
     }, LV_EVENT_VALUE_CHANGED, NULL);
 
+
+    lv_obj_add_event_cb(root, [](lv_event_t *e){
+        lv_obj_t *r = lv_event_get_target(e);
+        lv_obj_clean(r); // cancella tutti i figli in sicurezza
+    }, LV_EVENT_DELETE, NULL);
+
     lv_obj_t *right = lv_obj_create(root);
     lv_obj_remove_style_all(right);
     lv_obj_set_flex_flow(right, LV_FLEX_FLOW_COLUMN);
