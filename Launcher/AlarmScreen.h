@@ -1,6 +1,7 @@
 #pragma once
 #include "AppScreenLayout.h"
 #include "AlarmManager.h"
+#include "EditAlarmScreen.h"
 
 class AlarmScreen : public AppScreenLayout {
 private:
@@ -51,7 +52,18 @@ public:
         lv_obj_set_style_pad_all(row, 10, 0);
         lv_obj_set_style_pad_gap(row, 10, 0);
 
+        lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(row, [](lv_event_t *e) {
+            uint32_t id = (uint32_t)lv_event_get_user_data(e);
+
+            Alarm* alarm = AlarmManager::getById(id);
+            if (!alarm) return;
+
+            ScreenManager::get().openModal(new EditAlarmScreen(alarm->id));
+        }, LV_EVENT_CLICKED, (void*)alarm.id);
+
         lv_obj_t* col = lv_obj_create(row);
+        lv_obj_set_height(col, LV_SIZE_CONTENT);
         lv_obj_set_flex_flow(col, LV_FLEX_FLOW_COLUMN);
         lv_obj_set_style_border_width(col, 0, 0);
         lv_obj_set_style_pad_all(col, 0, 0);
@@ -79,6 +91,10 @@ public:
             size_t idx = (size_t)lv_event_get_user_data(e);
             AlarmManager::toggle(idx);
         }, LV_EVENT_VALUE_CHANGED, (void*)index);
+
+        lv_obj_add_flag(col, LV_OBJ_FLAG_EVENT_BUBBLE);
+        lv_obj_clear_flag(timeLabel, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(desc, LV_OBJ_FLAG_CLICKABLE);
     }
 
     void onLoop() override {

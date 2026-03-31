@@ -2,10 +2,6 @@
 #include <lvgl.h>
 #include <Arduino.h>
 
-static uint32_t generateId() {
-    return (uint32_t)time(nullptr) ^ esp_random();
-}
-
 struct MboxContext {
     lv_obj_t *mbox;
     String *appName;

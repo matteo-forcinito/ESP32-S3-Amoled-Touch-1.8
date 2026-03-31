@@ -43,6 +43,7 @@ AlwaysOnScreen alwaysOnScreen;
 LauncherScreen *launcher = new LauncherScreen();
 bool enableAlwaysOn = false;
 bool backToLaucher = false;
+uint32_t lastTriggeredId = 0;
 
 // --- SETUP ---
 void setup() {
@@ -167,30 +168,29 @@ void loop() {
 
 void checkAlarms() {
   time_t now = time(nullptr);
-  static uint32_t lastTriggeredId = 0;
 
   uint32_t idx = AlarmManager::checkAlarms(now);
-  if (idx != -1) {
-    const Alarm* a = AlarmManager::getById(idx);
-
-    if (a && a->id != lastTriggeredId) {
-      if(isAlwaysOn) {
-        setCpuFrequencyMhz(240);
-        isAlwaysOn = false;
-        gfx->Display_Brightness(140);
+  USBSerial.print("idx = ");
+  USBSerial.println(String(idx));
+  if (idx != 0) {
+      const Alarm* a = AlarmManager::getById(idx);
+      if(a) {
+        USBSerial.printf("id = %s", String(a->id));
+        USBSerial.printf("idx = %s", String(idx));
       }
+      if (a && a->id != lastTriggeredId) {
+        if(isAlwaysOn) exitAlwaysOn();
 
-      lastTriggeredId = a->id;
-      
-      if (openApp) {
-        openApp->onDestroy();
-        delete openApp;
-        openApp = nullptr;
+        lastTriggeredId = a->id;
+        if (openApp) {
+          openApp->onDestroy();
+          delete openApp;
+          openApp = nullptr;
+        }
+
+        openApp = new AlarmTriggerScreen(a->id);
+        openApp->create();
       }
-
-      openApp = new AlarmTriggerScreen(a->id);
-      openApp->create();
-    }
   }
 }
 

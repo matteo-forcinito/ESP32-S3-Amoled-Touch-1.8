@@ -27,6 +27,7 @@ public:
 
     static void alarmTask(void* param);
 
+    static bool isAlarmRunning() { return alarmRunning; }
 private:
     static bool initialized;
     static uint8_t volume;

@@ -7,6 +7,7 @@
 #include "AppState.h"
 
 extern HWCDC USBSerial;
+extern bool appClose;
 
 class AppScreen {
 protected:
@@ -99,6 +100,10 @@ public:
 
     bool isRequestedTime() {
         return requestedTime;
+    }
+
+    void close() {
+        appClose = true;
     }
 
     AppScreen* getModal() { return modal; }

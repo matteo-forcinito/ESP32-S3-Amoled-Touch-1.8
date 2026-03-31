@@ -6,12 +6,13 @@
 #include "SensorPCF85063.hpp"
 
 extern SensorPCF85063 rtc;
+extern uint32_t lastTriggeredId;
 
 class AlarmManager {
 private:
     static std::vector<Alarm> alarms;
     static const char* FILE_PATH;
-
+    static uint32_t id;
 public:
     static void load();
     static bool save();
@@ -25,5 +26,11 @@ public:
     static bool isAlarmImminent(const Alarm& alarm, int minutesBefore);
     static Alarm* getById(uint32_t id);
     static bool removeById(uint32_t id);
+    static bool edit(const Alarm& updated);
     static bool toggleById(uint32_t id);
+    static uint32_t getLastId();
+
+    static uint32_t generateId() {
+        return getLastId() + 1;
+    }
 };

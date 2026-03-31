@@ -11,7 +11,7 @@ class AlarmManager {
 private:
     static std::vector<Alarm> alarms;
     static const char* FILE_PATH;
-
+    static uint32_t id;
 public:
     static void load();
     static bool save();
@@ -26,4 +26,9 @@ public:
     static Alarm* getById(uint32_t id);
     static bool removeById(uint32_t id);
     static bool toggleById(uint32_t id);
+    static uint32_t getLastId();
+
+    static uint32_t generateId() {
+        return getLastId() + 1;
+    }
 };

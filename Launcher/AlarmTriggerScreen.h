@@ -8,6 +8,7 @@ private:
   uint32_t id;
   Alarm *alarm = nullptr;
   unsigned long updateTime = 0;
+  unsigned long postponeTime = 0;
 public:
   AlarmTriggerScreen(uint32_t id) : id(id) {}
 
@@ -32,6 +33,7 @@ public:
     updateTime = millis();
 
     lv_obj_t *cont = lv_obj_create(root);
+    lv_obj_set_size(cont, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_t *title = lv_label_create(cont);
     lv_label_set_text(title, alarm->title.c_str());
     lv_obj_t *descr = lv_label_create(cont);
@@ -40,8 +42,10 @@ public:
     lv_obj_t *lbl = lv_label_create(btn);
     lv_label_set_text(lbl, "Turn OFF");
     lv_obj_add_event_cb(btn, [](lv_event_t *e) {
+      AlarmTriggerScreen *screen = (AlarmTriggerScreen*) lv_event_get_user_data(e);
       AudioManager::stopAlarm();
-    }, LV_EVENT_CLICKED, NULL);
+      screen->postponeTime = millis();
+    }, LV_EVENT_CLICKED, this);
   }
 
   void onLoop() override {
@@ -49,9 +53,14 @@ public:
       updateTime = 0;
       AudioManager::startAlarm();
     }
+    if(postponeTime != 0 && millis() - postponeTime > (60000 * 2)) {
+      postponeTime = 0;
+      AudioManager::startAlarm();
+    }
   }
 
   void onDestroy() override {
+    AudioManager::stopAlarm();
     AudioManager::deinit();
   }
 };

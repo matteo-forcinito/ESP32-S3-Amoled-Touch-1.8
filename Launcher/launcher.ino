@@ -77,6 +77,7 @@ SemaphoreHandle_t g_sdMutex;
 bool isCharging = false;
 bool alarmSet = false;
 unsigned long alarmSetTime = 0;
+bool appClose = false;
 
 #define LVGL_TICK_PERIOD_MS 2
 
@@ -115,25 +116,19 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
   }
 
 }
-
+uint32_t lastTriggeredId = 0;
 void checkAlarms() {
-  if(alarmSet) {
-    if(alarmSetTime == 0) {
-      alarmSetTime = millis();
-    } else if(millis() - alarmSetTime > 10000) {
-      alarmSet = false;
-      alarmSetTime = 0;
-    }
-
-    return;
-  }
   time_t now = time(nullptr);
-  static uint32_t lastTriggeredId = 0;
 
   uint32_t idx = AlarmManager::checkAlarms(now);
-  if (idx != -1) {
+  USBSerial.print("idx = ");
+  USBSerial.println(String(idx));
+  if (idx != 0) {
       const Alarm* a = AlarmManager::getById(idx);
-
+      if(a) {
+        USBSerial.printf("id = %s", String(a->id));
+        USBSerial.printf("idx = %s", String(idx));
+      }
       if (a && a->id != lastTriggeredId) {
           if(isAlwaysOn) exitAlwaysOn();
 
@@ -278,6 +273,7 @@ void setup() {
   esp_timer_create(&periodic_timer_args, &periodic_timer);
   esp_timer_start_periodic(periodic_timer, LVGL_TICK_PERIOD_MS * 1000);
 
+  AlarmManager::load();
   //ScreenManager::get().changeScreen(new HomeScreen());
   home.open();
 }
@@ -288,6 +284,11 @@ void loop() {
   checkAlarms();
   if(power.isCharging() != isCharging) {
     isCharging = power.isCharging();
+  }
+
+  if(appClose) {
+    appClose = false;
+    handleAppClose();
   }
 
   if(touchLastTime != 0 && screenManager.getCurrent()->getId() != APP_HOME) {
@@ -331,13 +332,7 @@ void loop() {
   }
   if(digitalRead(0) == HIGH && bootPressedTime != 0) {
     if(millis() - bootPressedTime < 1000) {
-      if(screenManager.getCurrent() != nullptr) {
-        if(screenManager.getCurrent()->getModal()) {
-          screenManager.getCurrent()->closeModal();
-        } else if(screenManager.getCurrent()->getId() != APP_HOME) {
-          home.open();
-        } 
-      }
+      handleAppClose();
     } else {
       enableAlwaysOn = true;
     }
@@ -421,6 +416,17 @@ void startAlwaysOn() {
   gfx->printf("%02d:%02d", localTime.tm_hour, localTime.tm_min);
 
   setCpuFrequencyMhz(80);
+}
+
+void handleAppClose() {
+  ScreenManager screenManager = ScreenManager::get();
+  if(screenManager.getCurrent() != nullptr) {
+    if(screenManager.getCurrent()->getModal()) {
+      screenManager.getCurrent()->closeModal();
+    } else if(screenManager.getCurrent()->getId() != APP_HOME) {
+      home.open();
+    } 
+  }
 }
 
 void returnToLauncher() {

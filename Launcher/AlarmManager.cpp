@@ -5,7 +5,17 @@
 // Definizione variabili statiche
 std::vector<Alarm> AlarmManager::alarms;
 const char* AlarmManager::FILE_PATH = "/alarms.json";
+uint32_t AlarmManager::id = 0;
 
+uint32_t AlarmManager::getLastId() {
+    uint32_t maxId = 0;
+
+    for (const auto& a : alarms) {
+        if (a.id > maxId) maxId = a.id;
+    }
+
+    return maxId;
+}
 // --- LOAD ---
 void AlarmManager::load() {
     alarms.clear();
@@ -72,10 +82,7 @@ const std::vector<Alarm>& AlarmManager::getAll() {
 void AlarmManager::add(const Alarm& alarm) {
     Alarm a = alarm;
 
-    if (a.id == 0) {
-        a.id = generateId();
-    }
-
+    a.id = generateId();
     alarms.push_back(a);
     save();
 }
@@ -95,7 +102,9 @@ void AlarmManager::toggle(size_t index) {
 // --- CHECK ---
 bool AlarmManager::shouldTrigger(const Alarm& a, time_t now) {
     if (!a.enabled) return false;
+
     RTC_DateTime datetime = rtc.getDateTime();
+
     return (datetime.hour == a.hour && datetime.minute == a.minute);
 }
 
@@ -103,7 +112,7 @@ uint32_t AlarmManager::checkAlarms(time_t now) {
     for (size_t i = 0; i < alarms.size(); i++) {
         if (shouldTrigger(alarms[i], now)) return alarms[i].id;
     }
-    return -1;
+    return 0;
 }
 
 bool AlarmManager::isAlarmImminent(const Alarm& alarm, int minutesBefore) {
@@ -133,6 +142,20 @@ bool AlarmManager::removeById(uint32_t id) {
         }
     }
     return false;
+}
+
+bool AlarmManager::edit(const Alarm& updated) {
+    for (auto &a : alarms) {
+        if (a.id == updated.id) {
+            a = updated;   // sostituzione completa
+            save();
+            if(lastTriggeredId == a.id) {
+                lastTriggeredId = 0;
+            }
+            return true;
+        }
+    }
+    return false; // id non trovato
 }
 
 bool AlarmManager::toggleById(uint32_t id) {
