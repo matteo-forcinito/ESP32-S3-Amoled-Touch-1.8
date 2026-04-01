@@ -1,5 +1,6 @@
 #pragma once
 #include "AppScreen.h"
+#include "ControlCenterScreen.h"
 
 class AppScreenLayout : public AppScreen {
 protected:
@@ -100,6 +101,11 @@ public:
                             LV_FLEX_ALIGN_CENTER,          // allinea verticalmente
                             LV_FLEX_ALIGN_CENTER);         // cross axis
       lv_obj_set_style_pad_all(header, 10, 0); // padding interno
+
+      lv_obj_add_flag(header, LV_OBJ_FLAG_CLICKABLE);
+      lv_obj_add_event_cb(header, [](lv_event_t *e) {
+        ScreenManager::get().openModal(new ControlCenterScreen());
+      }, LV_EVENT_CLICKED, NULL);
   /*
       lv_obj_add_event_cb(header, [](lv_event_t *e) {
         lv_dir_t dir = lv_indev_get_gesture_dir(lv_event_get_indev(e));
@@ -121,7 +127,7 @@ public:
           LV_FLEX_ALIGN_CENTER,   // orizzontale
           LV_FLEX_ALIGN_CENTER,  // verticale
           LV_FLEX_ALIGN_CENTER   // allineamento contenuto
-      );
+      ); 
 
       lblRam = lv_label_create(connections);
       lv_label_set_text(lblRam, getRamUsage().c_str());
