@@ -34,8 +34,9 @@ void WebServerManager::setupServer() {
 
         String page = "<h1>Benvenuto!</h1>";
         page += "<p>Il tuo IP: " + server.client().remoteIP().toString() + "</p>";
-        page += "<a href='/addNetwork'> Configure WiFi </a></hr>";
-        page += "<a href='/addAlarm'> Configure Alarm </a></hr>";
+        page += "<a href='/addNetwork'><button> Configure WiFi </button></a></hr>";
+        page += "<a href='/addAlarm'><button> Configure Alarm </button></a></hr>";
+        page += "<a href='/setTime'><button> Set Time </button></a></hr>";
 
         server.send(200, "text/html", page);
     });
@@ -122,6 +123,73 @@ void WebServerManager::setupServer() {
         server.send(200, "text/html", page);
     });
 
+    server.on("/setTime", HTTP_GET, [this]() {
+        if (!isLoggedIn()) return server.requestAuthentication();
+
+        String page = "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Configura ora</title></head><body>";
+        page += "<h1>Configura ora</h1>";
+        page += "<form method='POST' action='/saveTime'>";
+        page += "Anno: <input type='number' name='year' id='year'><br>";
+        page += "Mese: <input type='number' name='month' id='month'><br>";
+        page += "Giorno: <input type='number' name='day' id='day'><br>";
+        page += "Ora: <input type='number' name='hour' id='hour'><br>";
+        page += "Minuto: <input type='number' name='minute' id='minute'><br>";
+        page += "Secondo: <input type='number' name='second' id='second'><br>";
+        page += "<button type='submit'>Salva</button>";
+        page += "</form>";
+        page += "<a href='/'>Torna alla home</a>";
+
+        // Script per precompilare il form con l'ora del browser
+        page += R"rawliteral(
+            <script>
+            const now = new Date();
+            document.getElementById('year').value   = now.getFullYear();
+            document.getElementById('month').value  = now.getMonth() + 1;
+            document.getElementById('day').value    = now.getDate();
+            document.getElementById('hour').value   = now.getHours();
+            document.getElementById('minute').value = now.getMinutes();
+            document.getElementById('second').value = now.getSeconds();
+            </script>
+        )rawliteral";
+
+        page += "</body></html>";
+
+        server.send(200, "text/html", page);
+    });
+
+    server.on("/saveTime", HTTP_POST, [this]() {
+        if (!isLoggedIn()) return server.requestAuthentication();
+
+        int h      = server.arg("hour").toInt();
+        int m      = server.arg("minute").toInt();
+        int s      = server.arg("second").toInt();
+        int day    = server.arg("day").toInt();
+        int month  = server.arg("month").toInt();
+        int year   = server.arg("year").toInt();
+
+        // Aggiorna RTC
+        rtc.setDateTime(year, month, day, h, m, s);
+
+        // Aggiorna anche l’orologio di sistema ESP32
+        struct tm tm_info;
+        tm_info.tm_year = year - 1900;
+        tm_info.tm_mon  = month - 1;
+        tm_info.tm_mday = day;
+        tm_info.tm_hour = h;
+        tm_info.tm_min  = m;
+        tm_info.tm_sec  = s;
+        time_t newTime = mktime(&tm_info);
+        timeval tv = { .tv_sec = newTime, .tv_usec = 0 };
+        settimeofday(&tv, nullptr);
+
+        String page = "<h1>Ora impostata!</h1>";
+        page += "<p>" + String(day) + "/" + String(month) + "/" + String(year) + " " +
+                String(h) + ":" + String(m) + ":" + String(s) + "</p>";
+        page += "<a href='/'>Torna alla home</a>";
+
+        server.send(200, "text/html", page);
+    });
+
     server.begin();
     serverStarted = true;
     status = Status::RUNNING;
@@ -141,6 +209,8 @@ void WebServerManager::stop() {
 
     type = Type::IDLE;
     status = Status::IDLE;
+
+    WifiManager::stop();
 }
 
 bool WebServerManager::isLoggedIn() {

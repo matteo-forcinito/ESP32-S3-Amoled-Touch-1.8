@@ -6,6 +6,30 @@
 std::vector<Alarm> AlarmManager::alarms;
 const char* AlarmManager::FILE_PATH = "/alarms.json";
 uint32_t AlarmManager::id = 0;
+Alarm AlarmManager::systemAlarms[] = {
+    {1000001, 8, 30, 0, 0, 1, "Wake up", "System alarm", true},
+    {1000002, 22, 0, 0, 0, 1, "Sleep", "System alarm", true},
+    {1000003, 01, 35, 0, 0, 1, "Sleep", "System alarm", true},
+    {1000004, 01, 45, 0, 0, 1, "Sleep", "System alarm", true},
+    {1000006, 01, 55, 0, 0, 1, "Sleep", "System alarm", true}
+};
+
+const size_t AlarmManager::systemAlarmCount =
+    sizeof(AlarmManager::systemAlarms) / sizeof(AlarmManager::systemAlarms[0]);
+
+bool AlarmManager::prefsInitialized = false;
+Preferences AlarmManager::prefs;
+
+void AlarmManager::initPreferences() {
+    if (!prefsInitialized) {
+        prefs.begin("alarms", false);
+        prefsInitialized = true;
+    }
+}
+
+bool AlarmManager::isSystemAlarm(uint32_t id) {
+    return id >= 1000000;
+}
 
 uint32_t AlarmManager::getLastId() {
     uint32_t maxId = 0;
@@ -18,6 +42,10 @@ uint32_t AlarmManager::getLastId() {
 }
 // --- LOAD ---
 void AlarmManager::load() {
+    for (size_t i = 0; i < systemAlarmCount; i++) {
+        String key = "sys_" + String(systemAlarms[i].id);
+        systemAlarms[i].enabled = prefs.getBool(key.c_str(), systemAlarms[i].enabled);
+    }
     alarms.clear();
     SDManager sd;
     File file = sd.open(FILE_PATH);
@@ -109,9 +137,18 @@ bool AlarmManager::shouldTrigger(const Alarm& a, time_t now) {
 }
 
 uint32_t AlarmManager::checkAlarms(time_t now) {
-    for (size_t i = 0; i < alarms.size(); i++) {
-        if (shouldTrigger(alarms[i], now)) return alarms[i].id;
+    // USER alarms
+    for (const auto& a : alarms) {
+        if (shouldTrigger(a, now)) return a.id;
     }
+
+    // SYSTEM alarms
+    for (size_t i = 0; i < systemAlarmCount; i++) {
+        if (shouldTrigger(systemAlarms[i], now)) {
+            return systemAlarms[i].id;
+        }
+    }
+
     return 0;
 }
 
@@ -127,13 +164,21 @@ bool AlarmManager::isAlarmImminent(const Alarm& alarm, int minutesBefore) {
 }
 
 Alarm* AlarmManager::getById(uint32_t id) {
+    // USER
     for (auto &a : alarms) {
         if (a.id == id) return &a;
     }
+
+    // SYSTEM
+    for (size_t i = 0; i < systemAlarmCount; i++) {
+        if (systemAlarms[i].id == id) return &systemAlarms[i];
+    }
+
     return nullptr;
 }
 
 bool AlarmManager::removeById(uint32_t id) {
+    if (isSystemAlarm(id)) return false;
     for (auto it = alarms.begin(); it != alarms.end(); ++it) {
         if (it->id == id) {
             alarms.erase(it);
@@ -144,12 +189,42 @@ bool AlarmManager::removeById(uint32_t id) {
     return false;
 }
 
+bool AlarmManager::edit(const Alarm& updated) {
+    if (isSystemAlarm(updated.id)) return false;
+    for (auto &a : alarms) {
+        if (a.id == updated.id) {
+            a = updated;   // sostituzione completa
+            save();
+            if(lastTriggeredId == a.id) {
+                lastTriggeredId = 0;
+            }
+            return true;
+        }
+    }
+    return false; // id non trovato
+}
+
 bool AlarmManager::toggleById(uint32_t id) {
     Alarm* a = getById(id);
     if (!a) return false;
 
     a->enabled = !a->enabled;
-    save();
+
+    if (isSystemAlarm(id)) {
+        // salva su NVS
+        String key = "sys_" + String(id);
+        prefs.putBool(key.c_str(), a->enabled);
+    } else {
+        save(); // user alarms → SD
+    }
 
     return true;
+}
+
+const Alarm& AlarmManager::getSystemAlarm(size_t index) {
+    return systemAlarms[index];
+}
+
+size_t AlarmManager::getSystemAlarmCount() {
+    return systemAlarmCount;
 }

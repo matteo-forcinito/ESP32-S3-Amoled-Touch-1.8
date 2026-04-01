@@ -4,15 +4,21 @@
 #include "SDManager.h"
 #include "Utils.h"
 #include "SensorPCF85063.hpp"
+#include <Preferences.h>
 
 extern SensorPCF85063 rtc;
+extern uint32_t lastTriggeredId;
 
 class AlarmManager {
 private:
     static std::vector<Alarm> alarms;
     static const char* FILE_PATH;
     static uint32_t id;
+    static const size_t systemAlarmCount;
 public:
+    static Preferences prefs;
+    static Alarm systemAlarms[];            // ✅ dichiarazione
+    static bool prefsInitialized;
     static void load();
     static bool save();
     static const std::vector<Alarm>& getAll();
@@ -20,13 +26,18 @@ public:
     static void remove(size_t index);
     static void toggle(size_t index);
 
+    static void initPreferences();
     static bool shouldTrigger(const Alarm& a, time_t now);
     static uint32_t checkAlarms(time_t now);
     static bool isAlarmImminent(const Alarm& alarm, int minutesBefore);
     static Alarm* getById(uint32_t id);
     static bool removeById(uint32_t id);
+    static bool edit(const Alarm& updated);
     static bool toggleById(uint32_t id);
     static uint32_t getLastId();
+    static bool isSystemAlarm(uint32_t id);
+    static const Alarm& getSystemAlarm(size_t index);
+    static size_t getSystemAlarmCount();
 
     static uint32_t generateId() {
         return getLastId() + 1;

@@ -1,6 +1,9 @@
 #pragma once
 #include <WebServer.h>
 #include <WiFi.h>
+#include "SensorPCF85063.hpp"
+
+extern SensorPCF85063 rtc;
 
 class WebServerManager {
 public:
