@@ -32,32 +32,9 @@ void WebServerManager::setupServer() {
     server.on("/", [this]() {
         if (!isLoggedIn()) return server.requestAuthentication();
 
-        String css = R"rawliteral(
-            <head>
-            <title>SmartBox</title>
-            <style>
-                body { display: flex; flex-direction: column; align-items: center; background: darkgrey; font-size: 16px; padding: 1rem; }
-                .container {
-                    padding: 1rem;
-                    background: white;
-                    box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, .4);
-                    border-radius: 5px;
-                }
-                .navigation { display: flex; }
-                button { background: darkblue; color: white; padding: 0.5rem 1rem; border-radius: 5px;  }
-            </style>
-            </head>
-        )rawliteral";
-        String page = css;
-        page += "<body><div class='container'>";
-        page += "<h1>Benvenuto!</h1>";
-        page += "<div class='navigation'>";
-        page += "   <a href='/addNetwork'><button> Configure WiFi </button></a><br>";
-        page += "   <a href='/addAlarm'><button> Configure Alarm </button></a><br>";
-        page += "   <a href='/setTime'><button> Set Time </button></a><br>";
-        page += "</div>";
-        page += "<p>Il tuo IP: " + server.client().remoteIP().toString() + "</p>";
-        page += "</div><body>";
+        String page = startPage(server.client().remoteIP().toString());
+        page += endPage();
+        
 
         server.send(200, "text/html", page);
     });
@@ -66,37 +43,23 @@ void WebServerManager::setupServer() {
         if (!isLoggedIn()) return server.requestAuthentication();
 
         int n = WiFi.scanNetworks();
-        String css = R"rawliteral(
-            <head>
-            <title>SmartBox</title>
-            <style>
-                body { display: flex; flex-direction: column; align-items: center; background: darkgrey; font-size: 16px; padding: 1rem; }
-                .container {
-                    padding: 1rem;
-                    background: white;
-                    box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, .4);
-                    border-radius: 5px;
-                }
-                .navigation { display: flex; }
-                button { background: darkblue; color: white; padding: 0.5rem 1rem; border-radius: 5px;  }
-            </style>
-            </head>
-        )rawliteral";
-        String page = css;
-        page += "<body><div class='container'>";
-        page += "<h1>Seleziona rete</h1>";
-        page += "<form method='POST' action='/saveNetwork'>";
-        page += "<select name='ssid'>";
 
+        String page = startPage(server.client().remoteIP().toString());
+
+        page += "<div class='container'>";
+        page += "   <h1>Seleziona rete</h1>";
+        page += "   <form method='POST' action='/saveNetwork'>";
+        page += "       <select name='ssid'>";
         for (int i = 0; i < n; ++i) {
-            page += "<option value='" + WiFi.SSID(i) + "'>" + WiFi.SSID(i) + "</option>";
+            page += "       <option value='" + WiFi.SSID(i) + "'>" + WiFi.SSID(i) + "</option>";
         }
-
-        page += "</select>";
-        page += "<input type='password' name='pwd'>";
-        page += "<button type='submit'>Salva</button>";
-        page += "</form>";
-        page += "</div></body>";
+        page += "       </select>";
+        page += "       <input type='password' name='pwd'>";
+        page += "       <button type='submit'>Salva</button>";
+        page += "   </form>";
+        page += "</div>";
+        
+        page += endPage();
 
         server.send(200, "text/html", page);
     });
@@ -110,30 +73,19 @@ void WebServerManager::setupServer() {
         WifiManager wm;
         bool ok = wm.saveNetwork("/networks.json", ssid, pwd);
 
-        String css = R"rawliteral(
-            <head>
-            <title>SmartBox</title>
-            <style>
-                body { display: flex; flex-direction: column; align-items: center; background: darkgrey; font-size: 16px; padding: 1rem; }
-                .container {
-                    padding: 1rem;
-                    background: white;
-                    box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, .4);
-                    border-radius: 5px;
-                }
-                .navigation { display: flex; }
-                button { background: darkblue; color: white; padding: 0.5rem 1rem; border-radius: 5px;  }
-            </style>
-            </head>
-        )rawliteral";
-        String page = css;
-        page += "<body><div class='container'>";
-        page += "<h1>";
+
+        String page = startPage(server.client().remoteIP().toString());
+
+        page += "<div class='container'>";
+        page += "   <h1>";
         page += ok ? "Rete salvata correttamente!" : "Errore nel salvataggio!";
-        page += "</h1>";
-        page += "<p>SSID: " + ssid + "</p>";
-        page += "<a href='/'>Torna alla home</a>";
-        page += "</div></body>";
+        page += "   </h1>";
+        page += "   <p>SSID: " + ssid + "</p>";
+        page += "   <a href='/'><button>Torna alla home</button></a>";
+        page += "</div>";
+
+        page += endPage();
+        
 
         server.send(200, "text/html", page);
 
@@ -144,36 +96,53 @@ void WebServerManager::setupServer() {
     server.on("/addAlarm", [this]() {
         if (!isLoggedIn()) return server.requestAuthentication();
 
-
         String css = R"rawliteral(
-            <head>
-            <title>SmartBox</title>
             <style>
-                body { display: flex; flex-direction: column; align-items: center; background: darkgrey; font-size: 16px; padding: 1rem; }
-                .container {
-                    padding: 1rem;
-                    background: white;
-                    box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, .4);
-                    border-radius: 5px;
+                .hours-container {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 1rem;
+                    margin: 1rem;
                 }
-                .navigation { display: flex; }
-                button { background: darkblue; color: white; padding: 0.5rem 1rem; border-radius: 5px;  }
+                .hours-container input {
+                    width: 2.5ch;
+                    align-self: normal;
+                    font-size: 5rem;
+                    text-align: center;
+                }
+                .hours-container .separator { font-size: 2rem; font-weight: bold; }
             </style>
-            </head>
         )rawliteral";
-        String page = css;
-        page += "<body><div class='container'>";
-        page += "<h1>Aggiungi nuova sveglia</h1>";
-        page += "<form method='POST' action='/saveAlarm'>";
-        page += "Ora: <input type='number' name='hour' min='0' max='23'><br>";
-        page += "Minuto: <input type='number' name='minute' min='0' max='59'><br>";
-        page += "Titolo: <input type='text' name='title'><br>";
-        page += "Descrizione: <input type='text' name='description'><br>";
-        page += "<label>Abilitata: <input type='checkbox' name='enabled' checked></label><br>";
-        page += "<button type='submit'>Salva</button>";
-        page += "</form>";
-        page += "<a href='/'><button>Torna alla home</button></a>";
-        page += "</div></body>";
+
+        String page = startPage(server.client().remoteIP().toString(), css);
+
+        page += "<div class='container'>";
+        page += "   <h1>Aggiungi nuova sveglia</h1>";
+        page += "   <form method='POST' action='/saveAlarm'>";
+        page += "       <div class='hours-container'>";
+        page += "           <input type='number' name='hour' min='0' max='23'>";
+        page += "           <p class='hours-separator'>:</p>";
+        page += "           <input type='number' name='minute' min='0' max='59'>";
+        page += "       </div>";
+        page += "       <div class='input-container'>";
+        page += "           <label for='title'>Titolo</label>";
+        page += "           <input class='input' type='text' name='title'>";
+        page += "       </div>";
+        page += "       <div class='input-container'>";
+        page += "           <label for='description'>Descrizione</label>";
+        page += "           <input class='input' type='text' name='description'>";
+        page += "       </div>";
+        page += "       <div class='input-container'>";
+        page += "           <label for='enabled'>Abilitata</label>";
+        page += "           <input class='input checkbox' type='checkbox' name='enabled'>";
+        page += "       </div>";
+        page += "       <button type='submit'>Salva</button>";
+        page += "   </form>";
+        page += "   <a href='/'><button>Torna alla home</button></a>";
+        page += "</div>";
+
+        page += endPage();
 
         server.send(200, "text/html", page);
     });
@@ -194,28 +163,16 @@ void WebServerManager::setupServer() {
 
         AlarmManager::add(a);
 
-        String css = R"rawliteral(
-            <head>
-            <title>SmartBox</title>
-            <style>
-                body { display: flex; flex-direction: column; align-items: center; background: darkgrey; font-size: 16px; padding: 1rem; }
-                .container {
-                    padding: 1rem;
-                    background: white;
-                    box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, .4);
-                    border-radius: 5px;
-                }
-                .navigation { display: flex; }
-                button { background: darkblue; color: white; padding: 0.5rem 1rem; border-radius: 5px;  }
-            </style>
-            </head>
-        )rawliteral";
-        String page = css;
-        page += "<body><div class='container'>";
-        page = "<h1>Sveglia salvata!</h1>";
-        page += "<p>" + a.title + " alle " + String(a.hour) + ":" + String(a.minute) + "</p>";
-        page += "<a href='/'><button>Torna alla home</button></a>";
-        page += "</div></body>";
+
+        String page = startPage(server.client().remoteIP().toString());
+
+        page += "<div class='container'>";
+        page = "    <h1>Sveglia salvata!</h1>";
+        page += "   <p>" + a.title + " alle " + String(a.hour) + ":" + String(a.minute) + "</p>";
+        page += "   <a href='/'><button>Torna alla home</button></a>";
+        page += "</div>";
+
+        page += endPage();
 
         server.send(200, "text/html", page);
     });
@@ -223,34 +180,19 @@ void WebServerManager::setupServer() {
     server.on("/setTime", HTTP_GET, [this]() {
         if (!isLoggedIn()) return server.requestAuthentication();
 
-        String css = R"rawliteral(
-            <head>
-            <title>SmartBox</title>
-            <style>
-                body { display: flex; flex-direction: column; align-items: center; background: darkgrey; font-size: 16px; padding: 1rem; }
-                .container {
-                    padding: 1rem;
-                    background: white;
-                    box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, .4);
-                    border-radius: 5px;
-                }
-                .navigation { display: flex; }
-                button { background: darkblue; color: white; padding: 0.5rem 1rem; border-radius: 5px;  }
-            </style>
-            </head>
-        )rawliteral";
-        String page = css;
-        page += "<body><div class='container'>";
-        page += "<h1>Configura ora</h1>";
-        page += "<form method='POST' action='/saveTime'>";
-        page += "Anno: <input type='number' name='year' id='year'><br>";
-        page += "Mese: <input type='number' name='month' id='month'><br>";
-        page += "Giorno: <input type='number' name='day' id='day'><br>";
-        page += "Ora: <input type='number' name='hour' id='hour'><br>";
-        page += "Minuto: <input type='number' name='minute' id='minute'><br>";
-        page += "Secondo: <input type='number' name='second' id='second'><br>";
-        page += "<button type='submit'>Salva</button>";
-        page += "</form>";
+        String page = startPage(server.client().remoteIP().toString());
+
+        page += "<div class='container'>";
+        page += "   <h1>Configura ora</h1>";
+        page += "   <form method='POST' action='/saveTime'>";
+        page += "       Anno: <input type='number' name='year' id='year'><br>";
+        page += "       Mese: <input type='number' name='month' id='month'><br>";
+        page += "       Giorno: <input type='number' name='day' id='day'><br>";
+        page += "       Ora: <input type='number' name='hour' id='hour'><br>";
+        page += "       Minuto: <input type='number' name='minute' id='minute'><br>";
+        page += "       Secondo: <input type='number' name='second' id='second'><br>";
+        page += "       <button type='submit'>Salva</button>";
+        page += "   </form>";
         page += "<a href='/'><button>Torna alla home</button></a>";
 
         // Script per precompilare il form con l'ora del browser
@@ -266,7 +208,10 @@ void WebServerManager::setupServer() {
             </script>
         )rawliteral";
 
-        page += "</div></body>";
+        page += "</div>";
+
+        page += endPage();
+
 
         server.send(200, "text/html", page);
     });
@@ -297,29 +242,17 @@ void WebServerManager::setupServer() {
         settimeofday(&tv, nullptr);
 
 
-        String css = R"rawliteral(
-            <head>
-            <title>SmartBox</title>
-            <style>
-                body { display: flex; flex-direction: column; align-items: center; background: darkgrey; font-size: 16px; padding: 1rem; }
-                .container {
-                    padding: 1rem;
-                    background: white;
-                    box-shadow: 2px 2px 2px 2px rgba(0, 0, 0, .4);
-                    border-radius: 5px;
-                }
-                .navigation { display: flex; }
-                button { background: darkblue; color: white; padding: 0.5rem 1rem; border-radius: 5px;  }
-            </style>
-            </head>
-        )rawliteral";
-        String page = css;
-        page += "<body><div class='container'>";
-        page += "<h1>Ora impostata!</h1>";
-        page += "<p>" + String(day) + "/" + String(month) + "/" + String(year) + " " +
+        String page = startPage(server.client().remoteIP().toString());
+
+        page += "<div class='container'>";
+        page += "   <h1>Ora impostata!</h1>";
+        page += "   <p>" + String(day) + "/" + String(month) + "/" + String(year) + " " +
                 String(h) + ":" + String(m) + ":" + String(s) + "</p>";
-        page += "<a href='/'><button>Torna alla home</button></a>";
-        page += "</div></body>";
+        page += "   <a href='/'><button>Torna alla home</button></a>";
+        page += "</div>";
+
+        page += endPage();
+
 
         server.send(200, "text/html", page);
     });

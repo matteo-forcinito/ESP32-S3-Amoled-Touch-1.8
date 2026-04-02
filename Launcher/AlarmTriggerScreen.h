@@ -3,14 +3,19 @@
 #include "AlarmManager.h"
 #include "AudioManager.h"
 
+extern unsigned long touchLastTime;
+extern Arduino_GFX *gfx;
+
 class AlarmTriggerScreen : public AppScreen {
 private:
-  uint32_t id;
+  AppState id = APP_ALARM_TRIGGER;
+  uint32_t alarmId;
   Alarm *alarm = nullptr;
   unsigned long updateTime = 0;
   unsigned long postponeTime = 0;
+  unsigned long bright = 100;
 public:
-  AlarmTriggerScreen(uint32_t id) : id(id) {}
+  AlarmTriggerScreen(uint32_t alarmId) : alarmId(alarmId) {}
 
   void onCreate() override {
     lv_obj_set_style_bg_color(root, lv_color_hex(0xFF0000), 0);
@@ -21,7 +26,7 @@ public:
                   LV_FLEX_ALIGN_CENTER); // spazio tra items
     lv_obj_set_style_pad_all(root, 10, 0);
 
-    alarm = AlarmManager::getById(id);
+    alarm = AlarmManager::getById(alarmId);
     if(alarm == nullptr) {
       lv_obj_t *c = lv_label_create(root);
       lv_label_set_text(c, "No Alarm Found!");
@@ -46,6 +51,8 @@ public:
       AudioManager::stopAlarm();
       screen->postponeTime = millis();
     }, LV_EVENT_CLICKED, this);
+
+    bright = 100;
   }
 
   void onLoop() override {
@@ -56,6 +63,25 @@ public:
     if(postponeTime != 0 && millis() - postponeTime > (60000 * 2)) {
       postponeTime = 0;
       AudioManager::startAlarm();
+    }
+    if(touchLastTime == 0) { 
+      gfx->Display_Brightness(bright);
+      touchLastTime = millis(); 
+    }
+    unsigned long elapsed = millis() - touchLastTime;
+    /*
+    static unsigned long last = millis();
+    bright = constrain(bright, 0, 255);
+    if(millis() - last > 25) {
+      last = millis();
+    } else if(elapsed < 1000) {
+      gfx->Display_Brightness(++bright);
+    } else if(elapsed < 2000) {
+      gfx->Display_Brightness(--bright);
+    } 
+    */
+    if(elapsed > 2000) {
+      touchLastTime = millis();
     }
   }
 

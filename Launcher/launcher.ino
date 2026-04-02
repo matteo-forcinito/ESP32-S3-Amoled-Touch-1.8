@@ -166,6 +166,7 @@ void exitAlwaysOn() {
   //Wire.begin(IIC_SDA, IIC_SCL); // riattiva touch
   setCpuFrequencyMhz(240);
   isAlwaysOn = false;
+  touchLastTime = millis();
   gfx->Display_Brightness(brightness);
   delay(1000);
   // Forza LVGL a ridisegnare lo screen principale
@@ -266,11 +267,11 @@ void setup() {
   esp_timer_handle_t periodic_timer;
   esp_timer_create(&periodic_timer_args, &periodic_timer);
   esp_timer_start_periodic(periodic_timer, LVGL_TICK_PERIOD_MS * 1000);
-
   AlarmManager::load();
   AlarmManager::initPreferences();
   //ScreenManager::get().changeScreen(new HomeScreen());
   home.open();
+  touchLastTime = millis();
 }
 
 void loop() {
@@ -287,15 +288,15 @@ void loop() {
     handleAppClose();
   }
 
-  if(touchLastTime != 0 && screenManager.getCurrent()->getId() != APP_HOME) {
-    touchLastTime = 0;
-  } 
-  if(enableAlwaysOn || (touchLastTime != 0 && millis() - touchLastTime > (60000 * 5))) {
+  if(enableAlwaysOn) {
     enableAlwaysOn = false;
-    touchLastTime = 0;
     startAlwaysOn();
 
     return;
+  }
+  if((touchLastTime != 0) && (millis() - touchLastTime > (1000 * 30))) {
+    touchLastTime = 0;
+    gfx->Display_Brightness(30);
   }
   
   RTC_DateTime datetime = rtc.getDateTime();
@@ -328,7 +329,12 @@ void loop() {
   }
   if(digitalRead(0) == HIGH && bootPressedTime != 0) {
     if(millis() - bootPressedTime < 1000) {
-      handleAppClose();
+      if(touchLastTime == 0) {
+        touchLastTime = millis();
+        gfx->Display_Brightness(brightness);
+      } else {
+        handleAppClose();
+      }
     } else {
       enableAlwaysOn = true;
     }
@@ -344,9 +350,10 @@ void loop() {
   if(fingers > 0) {
     // actually disabled due to a bad feedback sound
     // AudioManager::playTap();
+    if(touchLastTime == 0) {
+      gfx->Display_Brightness(brightness);
+    }
     touchLastTime = millis();
-    AudioManager::stopAlarm();
-    AudioManager::deinit();
   } else if(touchLastTime == 0 && screenManager.getCurrent()->getId() == APP_HOME) {
     touchLastTime = millis();
   }

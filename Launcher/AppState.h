@@ -17,6 +17,7 @@ typedef enum {
     APP_INSTALLER,
     APP_CONTROL_CENTER,
     APP_USBMSC,
+    APP_ALARM_TRIGGER,
     APP_INVALID_APP
 } AppState;
 

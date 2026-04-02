@@ -11,7 +11,6 @@ public:
     AlarmScreen() : AppScreenLayout("Alarms") {}
 
     void onCreate() override {
-        AlarmManager::load();
         list = lv_obj_create(container);
         lv_obj_remove_style_all(list);
         lv_obj_set_size(list, lv_pct(100), lv_pct(100));
