@@ -1,0 +1,30 @@
+#pragma once
+#include "AppScreenLayout.h"
+#include "RadioManager.h"
+#include "WebRadioPlayerScreen.h"
+
+class RadioStationsScreen : public AppScreenLayout {
+public:
+ RadioStationsScreen() : AppScreenLayout("Radio Stations") {};
+
+ void onCreate() override {
+   std::vector<RadioStation> &stations = RadioManager::getAll();
+   if(stations.empty()) {
+     lv_obj_t *lblNoStations = lv_label_create(container);
+     lv_label_set_text(lblNoStations, "No stations found!");
+     return;
+   }
+
+   for(auto& s : stations) {
+     lv_obj_t *btnStation = lv_btn_create(container);
+     lv_obj_t *lblStation = lv_label_create(btnStation);
+     lv_label_set_text(lblStation, s.name.c_str());
+lv_obj_add_event_cb(btnStation, [](lv_event_t *e) {
+    RadioStation* station = (RadioStation*)lv_event_get_user_data(e);
+    if(station) {
+        ScreenManager::get().openModal(new WebRadioPlayerScreen(station->id));
+    }
+}, LV_EVENT_CLICKED, &s);
+   }
+ }
+};
