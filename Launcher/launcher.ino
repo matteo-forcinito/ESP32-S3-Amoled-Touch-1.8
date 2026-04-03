@@ -31,7 +31,6 @@ I2SClass i2s;
 #include "esp_check.h"
 #include "es8311.h"
 #include "canon.h"
-#include "Utils.h"
 #include "AlarmManager.h"
 
 #define EXAMPLE_SAMPLE_RATE 16000
@@ -78,7 +77,6 @@ bool isCharging = false;
 bool alarmSet = false;
 unsigned long alarmSetTime = 0;
 bool appClose = false;
-Alarm nextAlarm;
 
 #define LVGL_TICK_PERIOD_MS 2
 
@@ -118,24 +116,20 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
 
 }
 uint32_t lastTriggeredId = 0;
-unsigned long lastAlarmsRead = 0;
-#define int ALARMS_READ_UPDATE_MINUTES 6
 void checkAlarms() {
-  if(millis() - lastAlarmsRead > (1000 * 60) * ALARMS_READ_UPDATE_MINUTES) {
-    lastAlarmsRead = millis();
-
-    AlarmManager::getNextAlarmWithin(ALARMS_READ_UPDATE_MINUTES, nextAlarm);
-  }
-  if(nextAlarm.id != 0) {
-    RTC_DateTime now = rtc.getDateTime();
-
-    if (now.hour == cached.hour && now.minute == cached.minute) {
-        // trigger
-        ScreenManager::get().openModal(new AlarmTriggerScreen());
-        cached.id = 0; // reset cache
-    }
+  time_t now = time(nullptr);
+  uint32_t idx = AlarmManager::checkAlarms(now);
+  if (idx != 0) {
+      const Alarm* a = AlarmManager::getById(idx);
+      if (a && a->id != lastTriggeredId) {
+          if(isAlwaysOn) exitAlwaysOn();
+          lastTriggeredId = a->id;
+          ScreenManager::get().openModal(new AlarmTriggerScreen(a->id));
+          
+      }
   }
 }
+
 
 
 void alwaysOn() {
