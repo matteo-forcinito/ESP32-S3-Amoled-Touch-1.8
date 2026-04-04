@@ -19,12 +19,10 @@ public:
      lv_obj_t *btnStation = lv_btn_create(container);
      lv_obj_t *lblStation = lv_label_create(btnStation);
      lv_label_set_text(lblStation, s.name.c_str());
-lv_obj_add_event_cb(btnStation, [](lv_event_t *e) {
-    RadioStation* station = (RadioStation*)lv_event_get_user_data(e);
-    if(station) {
-        ScreenManager::get().openModal(new WebRadioPlayerScreen(station->id));
-    }
-}, LV_EVENT_CLICKED, &s);
+      lv_obj_add_event_cb(btnStation, [](lv_event_t *e) {
+          uint16_t id = (uint32_t)lv_event_get_user_data(e);
+          ScreenManager::get().openModal(new WebRadioPlayerScreen(id));
+      }, LV_EVENT_CLICKED, (void*)s.id);
    }
  }
 };

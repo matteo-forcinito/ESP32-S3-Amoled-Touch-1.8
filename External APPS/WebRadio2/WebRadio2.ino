@@ -122,6 +122,7 @@ void setup() {
     USBSerial.println("Failed to initialize I2S bus!");
     return;
   }
+
   Wire.begin(IIC_SDA, IIC_SCL);
 
   // display init
@@ -143,7 +144,7 @@ void setup() {
     }
   }
 
-  //AudioManager::init();
+  AudioManager::init();
 
   configTime(0, 0, "pool.ntp.org");
   setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
@@ -187,7 +188,7 @@ void setup() {
   esp_timer_create(&periodic_timer_args, &periodic_timer);
   esp_timer_start_periodic(periodic_timer, LVGL_TICK_PERIOD_MS * 1000);
   // 🔊 init audio (USA IL TUO STACK)
-    AudioManager::init();
+  //AudioManager::init();
   RadioManager::init();
 
   home.open();
@@ -195,7 +196,6 @@ void setup() {
 
 void loop() {
   lv_timer_handler();
-
   if(backToLauncher) return;
 
   ScreenManager screenManager = ScreenManager::get();

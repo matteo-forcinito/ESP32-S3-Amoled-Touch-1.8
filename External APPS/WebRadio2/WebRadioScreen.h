@@ -1,7 +1,9 @@
 #pragma once
 #include "AppScreenLayout.h"
+#include "RadioManager.h"
 #include "AudioManager.h"
 #include "WiFiScreen.h"
+#include "RadioStationsScreen.h"
 
 class WebRadioScreen : public AppScreenLayout {
 private:
@@ -20,7 +22,10 @@ public:
   void onCreate() override {
     if(WiFi.status() != WL_CONNECTED) {
       status = Status::NO_WIFI;
+
+      return;
     }
+    RadioManager::start();
   }
 
   void onLoop() override {
@@ -39,7 +44,7 @@ public:
         lv_obj_t* lblOpenRadios = lv_label_create(btnOpenRadios);
         lv_label_set_text(lblOpenRadios, "Radio Stations");
         lv_obj_add_event_cb(btnOpenRadios, [](lv_event_t *e) {
-          //ScreenManager::get().openModal(new RadioStationsScreen());
+          ScreenManager::get().openModal(new RadioStationsScreen());
         }, LV_EVENT_CLICKED, NULL);
 
         break;
@@ -59,5 +64,10 @@ public:
     }
 
     lastStatus = status; 
+  }
+
+  void onDestroy() override {
+    USBSerial.print("stopping radio..");
+    RadioManager::stop();
   }
 };

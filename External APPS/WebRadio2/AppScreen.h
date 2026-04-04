@@ -58,7 +58,7 @@ public:
         AppScreen *old = modal;
         modal = nullptr;
 
-        create();
+       // create();
         show();
         
         if(old) {

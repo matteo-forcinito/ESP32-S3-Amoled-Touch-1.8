@@ -1,18 +1,44 @@
 #include "RadioManager.h"
 #include "SD_MMC.h"
+#include "AudioManager.h"
 
 std::vector<RadioStation> RadioManager::stations;
+
+AudioGeneratorMP3* RadioManager::mp3 = nullptr;
+AudioFileSourceICYStream* RadioManager::stream = nullptr;
+AudioOutputESP32I2S* RadioManager::output = nullptr;
+
+TaskHandle_t RadioManager::taskHandle = NULL;
+
+int RadioManager::requestedIndex = -1;
 int RadioManager::currentIndex = -1;
 
-AudioGeneratorMP3 RadioManager::mp3;
-AudioFileSourceICYStream RadioManager::stream;
-AudioOutputESP32I2S RadioManager::output;
+ std::atomic<bool> RadioManager::requestChange = false;
+ std::atomic<bool> RadioManager::requestStop = false;
+ std::atomic<bool> RadioManager::requestClose = false;
+ unsigned long RadioManager::lastTime = 0;
 
-bool RadioManager::running = false;
+RadioManager::State RadioManager::state = RadioManager::State::STOPPED;
+
+
+// ================= INIT =================
 
 bool RadioManager::init() {
     return loadFromSD();
 }
+
+void RadioManager::deinit() {
+    requestClose = true;
+}
+
+
+
+RadioManager::State RadioManager::getState() {
+    return state;
+}
+
+
+// ================= SD LOAD =================
 
 bool RadioManager::loadFromSD() {
     File file = SD_MMC.open("/stations.txt");
@@ -27,7 +53,6 @@ bool RadioManager::loadFromSD() {
 
         int p1 = line.indexOf('|');
         int p2 = line.indexOf('|', p1 + 1);
-
         if (p1 < 0 || p2 < 0) continue;
 
         RadioStation s;
@@ -39,114 +64,266 @@ bool RadioManager::loadFromSD() {
     }
 
     file.close();
-    return stations.size() > 0;
+    return !stations.empty();
 }
+
+
+// ================= GETTERS =================
 
 std::vector<RadioStation>& RadioManager::getAll() {
     return stations;
 }
 
-RadioStation* RadioManager::getById(uint16_t id) {
-    USBSerial.print("getById");
+bool RadioManager::getById(uint16_t id, RadioStation& out) {
     for (auto& s : stations) {
-        if (s.id == id) return &s;
+        if (s.id == id) {
+            out = s;
+            return true;
+        }
     }
-    USBSerial.print("id not found");
-    return nullptr;
+    return false;
 }
 
+
+// ================= CONTROL =================
+
 bool RadioManager::play(uint16_t id) {
-    RadioStation* s = getById(id);
-    if (!s) return false;
+    if (stations.empty()) return false;
 
-    stop();
-
-    USBSerial.print("Opening stream for: "); Serial.println(s->url);
-    stream.open(s->url.c_str());
-    mp3.begin(&stream, &output);
-
+    int index = -1;
     for (int i = 0; i < stations.size(); i++) {
         if (stations[i].id == id) {
-            currentIndex = i;
+            index = i;
             break;
         }
     }
 
-    running = true;
+    //if (index < 0) return false;
+
+    requestedIndex = index;
+    requestChange = true;   // 🔥 QUESTO MANCAVA
+    requestClose = false;
+
     return true;
 }
 
 void RadioManager::stop() {
-    if (running) {
-        mp3.stop();
-        stream.close();
-        running = false;
+    requestStop = true;
+    if (taskHandle) {
+        xTaskNotifyGive(taskHandle);  // sveglia subito
     }
-}
-
-void RadioManager::update() {
-    if (!running) return;
-
-    if (mp3.isRunning()) {
-        if (!mp3.loop()) {
-            // restart automatico
-            stream.close();
-            stream.open(stations[currentIndex].url.c_str());
-            mp3.begin(&stream, &output);
-        }
-    }
+    AudioManager::deinit();
 }
 
 bool RadioManager::isPlaying() {
-    return running;
+    return state == State::PLAYING;
 }
 
-bool RadioManager::loadFromSD2(const char* path) {
-    stations.clear();
-
-    File file = sdManager.open(path);
-    if (!file) {
-        // file non trovato
-        return false;
+bool RadioManager::start() {
+    AudioManager::init();
+    if (!taskHandle) {
+        xTaskCreatePinnedToCore(
+        RadioManager::radioTask,
+        "RadioTask",
+        8192,      // stack size
+        nullptr,
+        1,         // priority
+        &RadioManager::taskHandle,
+        1          // core
+        );
     }
+    if(taskHandle) {
+        return true;
+    }
+    return false;
+}
 
-    while (file.available()) {
-        String line = file.readStringUntil('\n');
-        line.trim();
+// ================= TASK =================
 
-        // skip righe vuote o commenti
-        if (line.length() == 0 || line.startsWith("#")) continue;
+void RadioManager::radioTask(void* param) {
+    while (!requestClose) {
 
-        int p1 = line.indexOf('|');
-        int p2 = line.indexOf('|', p1 + 1);
+        // aspetta eventuale notifica (wake-up immediato)
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(10));
 
-        if (p1 < 0 || p2 < 0) {
-            // formato invalido
+        if (requestStop) {
+            if (stream) stream->close();
+            if (mp3) { mp3->stop(); delete mp3; mp3 = nullptr; }
+            if (stream) { stream->close(); delete stream; stream = nullptr; }
+            if (output) { delete output; output = nullptr; }
+
+            state = State::STOPPED;
+            requestStop = false;
+        }
+
+        if (WiFi.status() != WL_CONNECTED) {
+            if (mp3) mp3->stop();
+            state = State::STOPPED;
+            vTaskDelay(pdMS_TO_TICKS(500));
             continue;
         }
 
-        String idStr   = line.substring(0, p1);
-        String nameStr = line.substring(p1 + 1, p2);
-        String urlStr  = line.substring(p2 + 1);
+        // STOP richiesto
+        if (requestStop) {
+            if (mp3) { mp3->stop(); delete mp3; mp3 = nullptr; }
+            if (stream) { stream->close(); delete stream; stream = nullptr; }
+            if (output) { delete output; output = nullptr; }
 
-        idStr.trim();
-        nameStr.trim();
-        urlStr.trim();
-
-        // validazione minima
-        if (idStr.length() == 0 || nameStr.length() == 0 || urlStr.length() == 0) {
-            continue;
+            state = State::STOPPED;
+            currentIndex = -1;
+            requestStop = false;
         }
 
-        RadioStation s;
-        s.id = idStr.toInt();
-        s.name = nameStr;
-        s.url = urlStr;
+        // Cambio stazione o reconnect
+        if (requestChange || state != State::PLAYING) {
+            requestChange = false;
 
-        stations.push_back(s);
+            if (mp3) { mp3->stop(); delete mp3; mp3 = nullptr; }
+            if (stream) { stream->close(); delete stream; stream = nullptr; }
+            if (output) { delete output; output = nullptr; }
+
+            currentIndex = requestedIndex;
+            if (currentIndex < 0) {
+                requestStop = true;
+                vTaskDelay(pdMS_TO_TICKS(500));
+                continue;
+            }
+
+            state = State::CONNECTING;
+
+            stream = new AudioFileSourceICYStream(stations[currentIndex].url.c_str());
+            output = new AudioOutputESP32I2S();
+            output->SetGain(AudioManager::getVolume() / 100.0f);
+            mp3 = new AudioGeneratorMP3();
+
+            if (!mp3->begin(stream, output)) {
+                // fallimento → riprova tra 1s
+                delete mp3; mp3 = nullptr;
+                delete stream; stream = nullptr;
+                delete output; output = nullptr;
+                state = State::CONNECTING;
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                continue;
+            }
+
+            state = State::PLAYING;
+        }
+
+        // Loop audio
+        if (state == State::PLAYING && mp3) {
+            if (!mp3->loop()) {
+                mp3->stop(); delete mp3; mp3 = nullptr;
+                stream->close(); delete stream; stream = nullptr;
+                delete output; output = nullptr;
+                state = State::CONNECTING; // riprova automaticamente
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 
-    file.close();
+    // Cleanup finale
+    if (mp3) { mp3->stop(); delete mp3; }
+    if (stream) { stream->close(); delete stream; }
+    if (output) { delete output; }
 
-    return stations.size() > 0;
+    AudioManager::deinit();
+    taskHandle = NULL;
+    vTaskDelete(NULL);
+}
+
+void RadioManager::loop() {
+    // limit loop frequency a ~100Hz
+    if (millis() - lastTime < 10) return;
+    lastTime = millis();
+
+    // 🔴 CHIUSURA STREAM
+    if (requestClose) {
+        if (mp3) { mp3->stop(); delete mp3; mp3 = nullptr; }
+        if (stream) { stream->close(); delete stream; stream = nullptr; }
+        if (output) { delete output; output = nullptr; }
+
+        AudioManager::deinit();
+        state = State::STOPPED;
+        currentIndex = -1;
+        return;
+    }
+
+    // 🔵 WiFi non connesso: stop e riprova al prossimo loop
+    if (WiFi.status() != WL_CONNECTED) {
+        if (mp3) mp3->stop();
+        state = State::STOPPED;
+        return;
+    }
+
+    // 🔴 STOP richiesto
+    if (requestStop) {
+        if (mp3) { mp3->stop(); delete mp3; mp3 = nullptr; }
+        if (stream) { stream->close(); delete stream; stream = nullptr; }
+        if (output) { delete output; output = nullptr; }
+
+        state = State::STOPPED;
+        currentIndex = -1;
+        requestStop = false;
+        return;
+    }
+
+    // 🔵 Cambio stazione richiesto
+    if (requestChange) {
+        requestChange = false;
+
+        // pulizia risorse precedenti
+        if (mp3) { mp3->stop(); delete mp3; mp3 = nullptr; }
+        if (stream) { stream->close(); delete stream; stream = nullptr; }
+        if (output) { delete output; output = nullptr; }
+
+        currentIndex = requestedIndex;
+        if (currentIndex < 0) return;
+
+        state = State::CONNECTING;
+        lastTime = 0; // reset timer reconnect
+    }
+
+    // 🔹 STATO CONNECTING: tenta di creare lo stream in modo non-bloccante
+    if (state == State::CONNECTING) {
+        static unsigned long lastConnectAttempt = 0;
+        if (millis() - lastConnectAttempt < 200) return; // retry lento 200ms
+        lastConnectAttempt = millis();
+
+        if (mp3) return; // già tentato
+
+        stream = new AudioFileSourceICYStream(stations[currentIndex].url.c_str());
+        output = new AudioOutputESP32I2S();
+        output->SetGain(AudioManager::getVolume() / 100.0f);
+        mp3 = new AudioGeneratorMP3();
+
+        if (!mp3->begin(stream, output)) {
+            delete mp3; mp3 = nullptr;
+            delete stream; stream = nullptr;
+            delete output; output = nullptr;
+            return; // retry al prossimo loop
+        }
+
+        state = State::PLAYING;
+    }
+
+    // 🔹 STATO PLAYING: loop breve, non-bloccante
+    if (state == State::PLAYING && mp3) {
+        bool ok = mp3->loop();
+        if (!ok) {
+            // se fallisce, pulisci risorse ma non bloccare la UI
+            mp3->stop(); delete mp3; mp3 = nullptr;
+            stream->close(); delete stream; stream = nullptr;
+            delete output; output = nullptr;
+
+            state = State::CONNECTING; // riprova al prossimo loop
+        }
+    }
+}
+void RadioManager::stopImmediate() {
+    requestStop = true;        // indica al task di fermarsi
+    if (taskHandle) {
+        // sveglia il task subito invece di aspettare il delay
+        xTaskNotifyGive(taskHandle);
+    }
 }

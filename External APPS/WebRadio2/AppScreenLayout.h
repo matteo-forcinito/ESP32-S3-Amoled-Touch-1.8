@@ -5,6 +5,7 @@
 class AppScreenLayout : public AppScreen {
 protected:
   lv_obj_t *container = nullptr;
+  lv_obj_t *titleLabel = nullptr;
 private:
   String title; 
 
@@ -12,7 +13,6 @@ private:
   bool wifiConnected = false;
   unsigned long lastUpdate = 0;
 
-  lv_obj_t *titleLabel = nullptr;
   lv_obj_t *timeLabel = nullptr;
   lv_obj_t *chargingLabel = nullptr; 
   lv_obj_t *battery = nullptr;

@@ -179,6 +179,8 @@ void AudioManager::ampOff() {
 }
 
 void AudioManager::setVolume(uint8_t vol) {
+    if (!initialized) return;
+    
     if (vol > 100) vol = 100;
     volume = vol;
 

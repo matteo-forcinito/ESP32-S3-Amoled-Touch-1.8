@@ -1,39 +1,69 @@
 #pragma once
 
 #include <vector>
-#include "SDManager.h"
-#include "RadioStation.h"
-#include "AudioGeneratorMP3.h"
-#include "AudioFileSourceICYStream.h"
-#include "AudioOutputESP32I2S.h"
+#include <Arduino.h>
+#include <WiFi.h>
 #include "HWCDC.h"
+#include "RadioStation.h"
+#include <atomic>
+
+#include "AudioFileSourceICYStream.h"
+#include "AudioGeneratorMP3.h"
+#include "AudioOutputESP32I2S.h"
 
 extern HWCDC USBSerial;
-extern SDManager sdManager;
 
 class RadioManager {
 public:
     static bool init();
-
-    static std::vector<RadioStation>& getAll();
-    static RadioStation* getById(uint16_t id);
+    static void deinit();
+    static bool start();
 
     static bool play(uint16_t id);
     static void stop();
-    static void update();
 
     static bool isPlaying();
 
-private:
-    static bool loadFromSD();
-    static bool loadFromSD2(const char* path = "/radio/stations.txt");
+    static std::vector<RadioStation>& getAll();
+    static bool getById(uint16_t id, RadioStation& out);
 
+    static void stopImmediate();
+
+    static void loop();
+
+    enum class State {
+        STOPPED,
+        CONNECTING,
+        PLAYING,
+        CHANGING,
+        INIT
+    };
+
+    static State getState();
+
+private:
+    static void radioTask(void* param);
+    static bool loadFromSD();
+
+    // data
     static std::vector<RadioStation> stations;
+
+    // audio
+    static AudioGeneratorMP3* mp3;
+    static AudioFileSourceICYStream* stream;
+    static AudioOutputESP32I2S* output;
+
+    // task
+    static TaskHandle_t taskHandle;
+
+    // state
+    static int requestedIndex;
     static int currentIndex;
 
-    static AudioGeneratorMP3 mp3;
-    static AudioFileSourceICYStream stream;
-    static AudioOutputESP32I2S output;
+    static std::atomic<bool> requestStop;
+    static std::atomic<bool> requestChange;
+    static std::atomic<bool> requestClose;
+    static unsigned long lastTime;
 
-    static bool running;
+    static State state;
 };
