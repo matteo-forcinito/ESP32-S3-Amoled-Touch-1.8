@@ -21,3 +21,35 @@ struct WifiNetwork {
     bool saved = false;
     bool connected = false;
 };
+
+
+
+struct Alarm {
+    uint32_t id;
+    int hour;
+    int minute;
+
+    uint32_t startEpoch;
+    uint8_t recurrence;
+    uint16_t interval;
+
+    String title;
+    String description;
+
+    bool enabled;
+};
+
+enum class Recurrence {
+    NONE = 0,
+    MINUTES,
+    HOURS,
+    DAYS,
+    WEEKS,
+    MONTHS
+};
+
+struct FileEntry {
+    String name;
+    bool isDirectory;
+    size_t size;
+};

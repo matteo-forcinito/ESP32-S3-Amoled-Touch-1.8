@@ -1,8 +1,13 @@
 #pragma once
 #include <WiFi.h>
+#include "HWCDC.h"
 #include <vector>
 #include "Utils.h"
 #include "SDManager.h"
+
+extern HWCDC USBSerial;
+
+extern SDManager sdManager;
 
 class WifiManager {
 public:
@@ -36,6 +41,7 @@ public:
     static std::vector<WifiNetwork> savedNetworks;
     
     static std::vector<WifiNetwork> loadSavedNetworks(const char* path);
+    static bool saveNetwork(const char* path, const String& ssid, const String& pwd);
 private:
     static void scanTask(void* param);
 

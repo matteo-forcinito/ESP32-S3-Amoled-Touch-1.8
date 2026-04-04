@@ -1,9 +1,13 @@
 #pragma once
 #include <lvgl.h>
+#include "HWCDC.h"
 
 #include "Utils.h"
 #include "ScreenManager.h"
 #include "AppState.h"
+
+extern HWCDC USBSerial;
+extern bool appClose;
 
 class AppScreen {
 protected:
@@ -11,6 +15,8 @@ protected:
     AppState id = APP_INVALID_APP;
 
     bool requestedTime = false;
+
+    AppScreen *modal = nullptr;
 public:
     AppScreen() : root(nullptr) {}
     virtual ~AppScreen() { destroy(); }
@@ -19,14 +25,51 @@ public:
     virtual void onDestroy() {}    // opzionale
     virtual void onShow() {}       // quando la schermata è caricata
     virtual void onTouch(int32_t x, int32_t y, int32_t fingers) {}
-    virtual void loop() {}
+    virtual void onLoop() {}
+
+    virtual void loop() {
+        if(modal) {
+            modal->loop();
+        } else if(root) {
+            onLoop();
+        }
+    }
 
     // Crea la schermata e richiama onCreate()
-    void create() {
+    virtual void create() {
         root = lv_obj_create(NULL);
         lv_obj_set_width(root, lv_pct(100));
         lv_obj_set_height(root, lv_pct(100));
         onCreate();
+    }
+
+    void openModal(AppScreen *newModal) {
+        if(!newModal) return;
+        modal = newModal;
+        if(modal) {
+            modal->create();
+            modal->show();
+        }
+    }
+
+    void closeModal() {
+        if(!modal) return;
+        
+        AppScreen *old = modal;
+        modal = nullptr;
+
+       // create();
+        show();
+        
+        if(old) {
+            old->destroy();  // ⚠️ solo LVGL objects
+
+            // defer delete DOPO che LVGL ha finito
+            lv_async_call([](void *data) {
+                AppScreen* app = static_cast<AppScreen*>(data);
+                delete app;
+            }, old);
+        }
     }
 
     // Mostra questa schermata
@@ -38,11 +81,11 @@ public:
 
     // Distrugge l'oggetto LVGL e chiama onDestroy()
     void destroy() {
+        onDestroy();
         if (root) {
             lv_obj_del(root);
             root = nullptr;
         }
-        onDestroy();
     }
 
     void touch(int32_t x, int32_t y, int32_t fingers) {
@@ -60,4 +103,10 @@ public:
     bool isRequestedTime() {
         return requestedTime;
     }
+
+    void close() {
+        appClose = true;
+    }
+
+    AppScreen* getModal() { return modal; }
 };
