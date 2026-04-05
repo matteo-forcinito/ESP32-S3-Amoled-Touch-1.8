@@ -1,22 +1,31 @@
 #include "SDManager.h"
 
 bool SDManager::init() {
+    return mount();
+}
+
+bool SDManager::mount() {
     SD_MMC.setPins(SDMMC_CLK, SDMMC_CMD, SDMMC_DATA);
     if (!SD_MMC.begin("/sdcard", true)) {
-        //USBSerial.println("[SDManager] ❌ Card Mount Failed");
         initialized = false;
         return false;
     }
-
     if (SD_MMC.cardType() == CARD_NONE) {
-        //USBSerial.println("[SDManager] ❌ No SD card found");
         initialized = false;
         return false;
     }
-
-    //USBSerial.println("[SDManager] ✅ SD card initialized successfully");
     initialized = true;
     return true;
+}
+
+void SDManager::unmount() {
+    SD_MMC.end();
+    initialized = false;
+}
+
+uint64_t SDManager::cardSizeBytes() {
+    if (!initialized) return 0;
+    return SD_MMC.cardSize();  // già in bytes su arduino-esp32 >= 2.x
 }
 
 std::vector<String> SDManager::listFiles(const char *path, uint8_t levels) {

@@ -16,4 +16,7 @@ public:
     bool isReady() const { return initialized; }
     bool isPathExists(const char *path);
     File open(const char* path);
+    bool mount();
+    void unmount();
+    uint64_t cardSizeBytes();
 };
