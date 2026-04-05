@@ -175,6 +175,7 @@ public:
       lv_obj_align(container, LV_ALIGN_TOP_MID, 0, 50);
       lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
       lv_obj_set_style_pad_all(container, 10, 0);
+      lv_obj_set_style_pad_gap(container, 10, 0);
 
       onCreate();
   }

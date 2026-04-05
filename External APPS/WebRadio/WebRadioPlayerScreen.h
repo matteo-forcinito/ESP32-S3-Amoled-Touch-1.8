@@ -10,6 +10,7 @@ private:
   lv_obj_t *noFound = nullptr;
   lv_obj_t *status = nullptr;
   lv_obj_t *btnClose = nullptr;
+  lv_obj_t *lblClose = nullptr;
 
   bool wasPlaying = true;
   bool ready = false;
@@ -41,6 +42,7 @@ public:
       lv_obj_set_flex_flow(sliderContainer, LV_FLEX_FLOW_ROW);
       lv_obj_set_flex_align(sliderContainer, LV_FLEX_ALIGN_CENTER,
                             LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+      lv_obj_set_style_pad_gap(sliderContainer, 10, 0);
       lv_obj_set_size(sliderContainer, lv_pct(100), LV_SIZE_CONTENT);
       lv_obj_t *slider = lv_slider_create(sliderContainer);
       lv_obj_set_height(slider, 30);
@@ -61,11 +63,16 @@ public:
       lv_obj_set_style_text_font(label, &lv_font_montserrat_24, 0);
 
       btnClose = lv_btn_create(container);
-      lv_obj_t *lblClose = lv_label_create(btnClose);
+      lblClose = lv_label_create(btnClose);
       lv_label_set_text(lblClose, "Close");
-      lv_obj_add_event_cb(btnClose, [](lv_event_t *e) {
-        RadioManager::stop();
-      }, LV_EVENT_CLICKED, NULL);
+      lv_obj_add_event_cb(btnClose, [](lv_event_t *e) {      
+        if(RadioManager::isPlaying()) {
+          RadioManager::play(-1);
+        } else {
+            uint16_t id = (uint32_t)lv_event_get_user_data(e);
+            RadioManager::play(id);
+        }
+      }, LV_EVENT_CLICKED, (void*)stationId);
 
       status = lv_label_create(container);
       
@@ -84,18 +91,24 @@ public:
     switch(state) {
       case RadioManager::State::CHANGING: {
         lv_label_set_text(status, "Changing Station...");
+        lv_obj_add_flag(btnClose, LV_OBJ_FLAG_HIDDEN);
         break;
       }
       case RadioManager::State::CONNECTING: {
         lv_label_set_text(status, "Connecting to station...");
+        lv_obj_add_flag(btnClose, LV_OBJ_FLAG_HIDDEN);
         break;
       }
       case RadioManager::State::STOPPED: {
         lv_label_set_text(status, "STOPPED!");
+        lv_label_set_text(lblClose, "Play");
+        lv_obj_clear_flag(btnClose, LV_OBJ_FLAG_HIDDEN);
         break;
       }
       case RadioManager::State::PLAYING: {
         lv_label_set_text(status, "Playing..");
+        lv_label_set_text(lblClose, "Stop");
+        lv_obj_clear_flag(btnClose, LV_OBJ_FLAG_HIDDEN);
         break;
       }
     }

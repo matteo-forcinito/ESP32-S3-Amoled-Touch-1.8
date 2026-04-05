@@ -90,6 +90,8 @@ bool RadioManager::getById(uint16_t id, RadioStation& out) {
 bool RadioManager::play(uint16_t id) {
     if (stations.empty()) return false;
 
+    if(stream) stream->close();
+
     int index = -1;
     for (int i = 0; i < stations.size(); i++) {
         if (stations[i].id == id) {
@@ -189,7 +191,7 @@ void RadioManager::radioTask(void* param) {
                 continue;
             }
 
-            state = State::CONNECTING;
+            state = State::CHANGING;
 
             stream = new AudioFileSourceICYStream(stations[currentIndex].url.c_str());
             output = new AudioOutputESP32I2S();

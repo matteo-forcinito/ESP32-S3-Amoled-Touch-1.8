@@ -8,8 +8,6 @@ public:
  RadioStationsScreen() : AppScreenLayout("Radio Stations") {};
 
  void onCreate() override {
-    lv_obj_set_style_pad_all(container, 10, 0);
-    lv_obj_set_style_pad_gap(container, 10, 0);
    std::vector<RadioStation> &stations = RadioManager::getAll();
    if(stations.empty()) {
      lv_obj_t *lblNoStations = lv_label_create(container);

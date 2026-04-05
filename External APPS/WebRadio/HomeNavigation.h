@@ -10,6 +10,37 @@
 class HomeNavigation : public Navigation {
 public:
     const char *getTitle() const override { return "Home"; }
+    static void onAppClick(lv_event_t *e, lv_event_cb_t originalCallback) {
+        String *appName = static_cast<String *>(lv_event_get_user_data(e));
+
+        static const char *btns[] = {"Si", "No", NULL};
+        String mboxDescr = "Vuoi aprire l'app " + *appName + "?";
+
+        lv_obj_t *mbox = lv_msgbox_create(lv_layer_top(), "Conferma", mboxDescr.c_str(), btns, true);
+        lv_obj_center(mbox);
+
+        // Creiamo il contesto con la callback originale
+        MboxContextWithCallback *ctx = new MboxContextWithCallback{mbox, new String(*appName), originalCallback, e};
+
+        lv_obj_add_event_cb(mbox, [](lv_event_t *ev) {
+            lv_event_code_t code = lv_event_get_code(ev);
+            if (code == LV_EVENT_VALUE_CHANGED) {
+                MboxContextWithCallback *ctx = static_cast<MboxContextWithCallback *>(lv_event_get_user_data(ev));
+                const char *txt = lv_msgbox_get_active_btn_text(ctx->mbox);
+                if (!txt) return;
+
+                if (strcmp(txt, "Si") == 0 && ctx->originalCallback) {
+                    // Chiamiamo la callback originale 👇
+                    ctx->originalCallback(ctx->originalEvent);
+                }
+
+                // Pulizia
+                lv_obj_del(ctx->mbox);
+                delete ctx->appName;
+                delete ctx;
+            }
+        }, LV_EVENT_VALUE_CHANGED, ctx);
+    }
 
     std::vector<MenuItem> buildAppList() override {
         std::vector<MenuItem> appsList;
@@ -35,27 +66,9 @@ public:
         });
 
         appsList.emplace_back("Back To Launcher", "S:/assets/icons/launcher.bin", [](lv_event_t *e) {
-            static const char *btns[] = {"Si", "No", NULL};
-            String mboxDescr = "Vuoi tornare al launcher?";
-
-            lv_obj_t *mbox = lv_msgbox_create(lv_layer_top(), "Conferma", mboxDescr.c_str(), btns, true);
-            lv_obj_center(mbox);
-
-            lv_obj_add_event_cb(mbox, [](lv_event_t *ev) {
-                lv_event_code_t code = lv_event_get_code(ev);
-                if (code == LV_EVENT_VALUE_CHANGED) {
-                    const char *txt = lv_msgbox_get_active_btn_text(lv_event_get_target(ev));
-                    if (!txt) return;
-
-                    if (strcmp(txt, "Si") == 0) {
-                        // Torna al launcher
-                        ScreenManager::get().changeScreen(new LauncherInstallerScreen());
-                    }
-
-                    // Chiudi la msgbox
-                    lv_obj_del(lv_event_get_target(ev));
-                }
-            }, LV_EVENT_VALUE_CHANGED, NULL);
+            HomeNavigation::onAppClick(e, [](lv_event_t *e){
+                ScreenManager::get().changeScreen(new LauncherInstallerScreen());
+            });
         });
 
         return appsList;
