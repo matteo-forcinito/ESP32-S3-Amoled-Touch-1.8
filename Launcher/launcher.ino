@@ -77,7 +77,7 @@ bool isCharging = false;
 bool alarmSet = false;
 unsigned long alarmSetTime = 0;
 bool appClose = false;
-ConfigManager config("/config.txt", g_sdMutex);
+ConfigManager* config = nullptr;
 
 #define LVGL_TICK_PERIOD_MS 2
 
@@ -135,7 +135,7 @@ void checkAlarms() {
 
 void alwaysOn() {
   //gfx->fillScreen(BLACK);
-  uint16_t alwaysOnColor = config.getUInt16("alwaysOnColor", 0xF800);
+  uint16_t alwaysOnColor = config->getUInt16("alwaysOnColor", 0xF800);
   gfx->setTextColor(alwaysOnColor); // rosso
 
   // Mostra percentuale batteria
@@ -267,8 +267,9 @@ void setup() {
   esp_timer_handle_t periodic_timer;
   esp_timer_create(&periodic_timer_args, &periodic_timer);
   esp_timer_start_periodic(periodic_timer, LVGL_TICK_PERIOD_MS * 1000);
-
-  config.begin();
+  
+  config = new ConfigManager("/config.txt", g_sdMutex);
+  config->begin();
 
   AlarmManager::load();
   AlarmManager::initPreferences();
@@ -406,7 +407,7 @@ void startAlwaysOn() {
 
   int weekday = localTime.tm_wday; // giorno della settimana corretto
 
-  uint16_t alwaysOnColor = config.getUInt16("alwaysOnColor", 0xF800);
+  uint16_t alwaysOnColor = config->getUInt16("alwaysOnColor", 0xF800);
   gfx->setTextColor(alwaysOnColor); // rosso
   // Prima riga: Mese Anno
   gfx->setTextSize(3);

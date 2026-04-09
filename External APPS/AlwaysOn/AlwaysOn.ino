@@ -19,6 +19,7 @@ extern "C" {
 #include "SimpleScreen.h"
 #include "AlarmManager.h"
 #include "AlarmTriggerScreen.h"
+#include "ConfigManager.h"
 
 #include "HWCDC.h"
 HWCDC USBSerial;
@@ -44,7 +45,7 @@ LauncherScreen *launcher = new LauncherScreen();
 bool enableAlwaysOn = false;
 bool backToLaucher = false;
 uint32_t lastTriggeredId = 0;
-ConfigManager config("/config.txt", g_sdMutex);
+ConfigManager* config = nullptr;
 
 // --- SETUP ---
 void setup() {
@@ -87,10 +88,13 @@ void setup() {
   setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
   tzset();
   
+  config = new ConfigManager("/config.txt", g_sdMutex);
+  config->begin();
+  
   AlarmManager::load();
   AlarmManager::initPreferences();
 
-  uint16_t alwaysOnColor = config.getUInt16("alwaysOnColor", 0xF800);
+  uint16_t alwaysOnColor = config->getUInt16("alwaysOnColor", 0xF800);
   gfx->setTextColor(alwaysOnColor); // 0x0320  0x03E0  0x0200
   launcher->create();
 

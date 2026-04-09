@@ -8,6 +8,8 @@
 #include "USBMSCScreen.h"
 #include "FileExplorerScreen.h"
 #include "MeteoScreen.h"
+#include "FTPServerScreen.h "
+#include "VoiceAssistantScreen.h"
 
 class SystemAppsNavigation : public Navigation {
 public:
@@ -89,6 +91,12 @@ public:
         appsList.emplace_back("moOde", "S:/assets/icons/moOde.bin", [](lv_event_t *e) {
             SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
                 ScreenManager::get().changeScreen(new MoodeScreen());
+            });
+        });
+
+        appsList.emplace_back("Voice Assistant", "S:/assets/icons/webserver.bin", [](lv_event_t *e) {
+            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
+                ScreenManager::get().changeScreen(new VoiceAssistantScreen());
             });
         });
 
