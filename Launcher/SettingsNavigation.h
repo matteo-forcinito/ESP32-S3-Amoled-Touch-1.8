@@ -5,6 +5,7 @@
 #include "ControlCenterScreen.h"
 #include "SetTimeNavigation.h"
 #include "AboutScreen.h"
+#include "ConfigsScreen.h"
 
 class SettingsNavigation : public Navigation {
 public:
@@ -70,6 +71,12 @@ public:
         appsList.emplace_back("About", "S:/assets/icons/about.bin", [](lv_event_t *e) {
             SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
                 ScreenManager::get().changeScreen(new AboutScreen());
+            });
+        });
+        
+        appsList.emplace_back("Customize", "S:/assets/icons/customize.bin", [](lv_event_t *e) {
+            SystemAppsNavigation::onAppClick(e, [](lv_event_t *e){
+                ScreenManager::get().changeScreen(new ConfigsScreen());
             });
         });
 

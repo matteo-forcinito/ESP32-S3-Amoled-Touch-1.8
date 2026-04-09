@@ -44,6 +44,7 @@ LauncherScreen *launcher = new LauncherScreen();
 bool enableAlwaysOn = false;
 bool backToLaucher = false;
 uint32_t lastTriggeredId = 0;
+ConfigManager config("/config.txt", g_sdMutex);
 
 // --- SETUP ---
 void setup() {
@@ -89,7 +90,8 @@ void setup() {
   AlarmManager::load();
   AlarmManager::initPreferences();
 
-  gfx->setTextColor(0x03E0); // 0x0320  0x03E0  0x0200
+  uint16_t alwaysOnColor = config.getUInt16("alwaysOnColor", 0xF800);
+  gfx->setTextColor(alwaysOnColor); // 0x0320  0x03E0  0x0200
   launcher->create();
 
 }
