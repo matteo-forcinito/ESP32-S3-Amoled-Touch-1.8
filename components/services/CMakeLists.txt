@@ -1,0 +1,45 @@
+# services: everything that is not UI and not a chip driver
+# (network, radio, alarms, notifications, weather, phone, web page, external apps).
+idf_component_register(
+    SRCS
+        "wifi/wifi.c"
+        "time/time_sync.c"
+        "sound/sound.c"
+        "alarm/alarm.c"
+        "notify/notify.c"
+        "weather/weather.c"
+        "radio/radio.c"
+        "radio/radio_player.c"
+        "radio/http_stream.c"
+        "radio/hls.c"
+        "radio/stream_format.c"
+        "radio/radio_list.c"
+        "ble/ble_companion.c"
+        "web/web_server.c"
+        "apps/extapp.c"
+    INCLUDE_DIRS
+        "include"
+    PRIV_INCLUDE_DIRS
+        "radio"
+    REQUIRES
+        core
+        hardware
+    PRIV_REQUIRES
+        esp_wifi
+        esp_netif
+        esp_event
+        esp_http_client
+        esp_http_server
+        esp-tls
+        mbedtls
+        nvs_flash
+        bt
+        app_update
+        esp_timer
+        esp_audio_codec
+        cjson
+        mdns
+    EMBED_TXTFILES
+        "radio/radios_default.txt"
+        "web/index.html"
+)

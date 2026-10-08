@@ -1,0 +1,30 @@
+idf_component_register(
+    SRCS
+        "board.c"
+        "i2c_bus.c"
+        "display.c"
+        "touch.c"
+        "pmu.c"
+        "rtc.c"
+        "audio.c"
+        "sdcard.c"
+        "button.c"
+    INCLUDE_DIRS
+        "include"
+    PRIV_INCLUDE_DIRS
+        "boards"
+    REQUIRES
+        esp_driver_i2c
+        esp_driver_gpio
+    PRIV_REQUIRES
+        esp_lcd
+        esp_driver_spi
+        esp_driver_i2s
+        esp_driver_sdmmc
+        sdmmc
+        fatfs
+        esp_timer
+        esp_pm
+        esp_codec_dev
+        esp_lcd_sh8601
+)

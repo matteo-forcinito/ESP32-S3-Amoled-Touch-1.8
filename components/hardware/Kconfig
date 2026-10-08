@@ -1,0 +1,31 @@
+menu "Board (hardware layer)"
+
+    choice BOARD_MODEL
+        prompt "Board model"
+        default BOARD_WS_AMOLED_1_8
+        help
+            The board this firmware is built for. Each board has a pin file in
+            components/hardware/boards/ and tells the rest of the firmware which
+            chips it has (display, touch, PMU, audio...). Apps never use pins.
+
+        config BOARD_WS_AMOLED_1_8
+            bool "Waveshare ESP32-S3-Touch-AMOLED-1.8 (368x448, SH8601)"
+    endchoice
+
+    config BOARD_LCD_PCLK_MHZ
+        int "Display QSPI clock (MHz)"
+        range 10 80
+        default 40
+        help
+            40 MHz is the value Waveshare uses. Higher may work on short traces.
+
+    config BOARD_DRAW_BUFFER_LINES
+        int "LVGL draw buffer height (lines, x2 buffers in internal RAM)"
+        range 16 112
+        default 40
+        help
+            Two buffers of width x lines x 2 bytes in DMA-capable internal RAM.
+            Taller buffers = fewer flushes (smoother), but less internal RAM for
+            Wi-Fi/BLE. 56 lines = 41 KB per buffer on the 368 px wide panel.
+
+endmenu

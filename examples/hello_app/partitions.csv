@@ -1,0 +1,14 @@
+# Flash layout (16 MB chip).
+#
+# Two app slots, like the Arduino launcher: the launcher runs from one,
+# external apps (installed from /sdcard/apps) are flashed into the other.
+# Old Arduino apps return with esp_ota_get_next_update_partition(), which
+# keeps working with this layout.
+#
+# Name,    Type, SubType,  Offset,   Size
+nvs,       data, nvs,      0x9000,   0x6000,
+otadata,   data, ota,      0xf000,   0x2000,
+phy_init,  data, phy,      0x11000,  0x1000,
+ota_0,     app,  ota_0,    0x20000,  6M,
+ota_1,     app,  ota_1,    ,         6M,
+coredump,  data, coredump, ,         64K,

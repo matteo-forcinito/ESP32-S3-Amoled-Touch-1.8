@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AMOLED Watch</title>
+<style>
+:root{--bg:#000;--card:#1c1c1e;--hi:#2c2c2e;--text:#fff;--dim:#8e8e93;--accent:#3d8bff;--red:#ff453a;--green:#30d158}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:640px;margin:auto;padding:16px}h1{font-size:28px;margin:8px 4px 4px}h2{font-size:15px;color:var(--dim);font-weight:500;margin:24px 8px 8px;text-transform:uppercase;letter-spacing:.05em}
+.card{background:var(--card);border-radius:18px;padding:6px 16px;margin-bottom:12px}.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--hi)}.row:last-child{border:0}
+.row label{flex:1}input,select,textarea{background:var(--hi);color:var(--text);border:0;border-radius:10px;padding:10px;font:inherit}input[type=text],input[type=password],select{width:55%}
+textarea{width:100%;min-height:260px;font:13px monospace}input[type=range]{flex:1}button{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:10px 18px;font:inherit;cursor:pointer}
+button.ghost{background:var(--hi)}button.red{background:var(--red)}.status{color:var(--dim);margin:0 4px}.chip{display:inline-block;padding:4px 10px;border-radius:99px;background:var(--hi);margin:2px;cursor:pointer;user-select:none}.chip.on{background:var(--accent)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--hi);padding:10px 18px;border-radius:99px;opacity:0;transition:.3s}.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<main>
+<h1>AMOLED Watch</h1>
+<p class="status" id="status">...</p>
+
+<h2>Sveglie</h2>
+<div class="card" id="alarms"></div>
+<div class="card">
+ <div class="row"><label>Ora</label><input type="time" id="a_time" value="07:30"></div>
+ <div class="row"><label>Nome</label><input type="text" id="a_label" value="Sveglia"></div>
+ <div class="row" id="a_days"></div>
+ <div class="row"><button onclick="addAlarm()">Aggiungi sveglia</button></div>
+</div>
+
+<h2>Wi-Fi</h2>
+<div class="card" id="wifi"></div>
+<div class="card">
+ <div class="row"><label>Rete</label><input type="text" id="w_ssid"></div>
+ <div class="row"><label>Password</label><input type="password" id="w_pass"></div>
+ <div class="row"><button onclick="addWifi()">Salva rete</button></div>
+</div>
+
+<h2>Impostazioni</h2>
+<div class="card">
+ <div class="row"><label>Luminosità</label><input type="range" min="10" max="255" id="brightness"></div>
+ <div class="row"><label>Spegnimento schermo (s)</label><input type="range" min="5" max="120" id="screen_timeout"></div>
+ <div class="row"><label>Volume</label><input type="range" min="0" max="100" id="volume"></div>
+ <div class="row"><label>Always on display</label><input type="checkbox" id="always_on"></div>
+ <div class="row"><label>Tocca per accendere</label><input type="checkbox" id="tap_to_wake"></div>
+ <div class="row"><label>Accendi con le notifiche</label><input type="checkbox" id="wake_on_notification"></div>
+ <div class="row"><label>Formato 24 ore</label><input type="checkbox" id="time_24h"></div>
+ <div class="row"><label>Ora automatica</label><input type="checkbox" id="auto_time"></div>
+ <div class="row"><label>Bluetooth</label><input type="checkbox" id="ble"></div>
+ <div class="row"><label>Nome Bluetooth</label><input type="text" id="device_name"></div>
+ <div class="row"><label>Fuso orario (POSIX)</label><input type="text" id="timezone"></div>
+ <div class="row"><button onclick="saveSettings()">Salva</button><button class="ghost" onclick="syncTime()">Ora dal browser</button></div>
+</div>
+
+<h2>Radio (radios.txt)</h2>
+<div class="card"><div class="row" style="display:block"><textarea id="radios"></textarea></div>
+ <div class="row"><button onclick="saveRadios()">Salva stazioni</button></div></div>
+
+<h2>App esterne</h2>
+<div class="card">
+ <div class="row"><label>Nome</label><input type="text" id="u_name" placeholder="MiaApp"></div>
+ <div class="row"><input type="file" id="u_file" accept=".bin"><button onclick="upload()">Carica .bin</button></div>
+</div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);const days=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];let dayMask=0x1F;
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2200)}
+async function api(path,body,raw){const o=body===undefined?{}:{method:'POST',body:raw?body:JSON.stringify(body)};const r=await fetch(path,o);return(r.headers.get('content-type')||'').includes('json')?r.json():r.text()}
+function done(r){toast(r.ok?(r.message||'Salvato'):(r.message||'Errore'))}
+function drawDays(){$('a_days').innerHTML=days.map((d,i)=>`<span class="chip ${dayMask&(1<<i)?'on':''}" onclick="dayMask^=${1<<i};drawDays()">${d}</span>`).join('')}
+function dayText(m){return m==0?'Una volta':m==127?'Ogni giorno':days.filter((d,i)=>m&(1<<i)).join(' ')}
+async function load(){
+ const s=await api('/api/state');const st=s.settings;
+ $('status').textContent=`Batteria ${s.battery<0?'-':s.battery+'%'}${s.charging?' (in carica)':''} · Wi-Fi ${s.wifi||'access point'} · SD ${s.sd?'ok':'assente'}`;
+ for(const k of['brightness','screen_timeout','volume','timezone','device_name'])$(k).value=st[k];
+ for(const k of['always_on','tap_to_wake','wake_on_notification','time_24h','auto_time','ble'])$(k).checked=st[k];
+ const al=await api('/api/alarms');$('alarms').innerHTML=al.length?al.map(a=>`<div class="row"><label><b>${String(a.hour).padStart(2,'0')}:${String(a.minute).padStart(2,'0')}</b> ${a.label}<br><small class="status">${dayText(a.days)}</small></label><input type="checkbox" ${a.enabled?'checked':''} onchange="api('/api/alarms',{id:${a.id},enabled:this.checked}).then(done)"><button class="red" onclick="api('/api/alarms',{id:${a.id},delete:true}).then(r=>{done(r);load()})">✕</button></div>`).join(''):'<div class="row status">Nessuna sveglia</div>';
+ const w=await api('/api/wifi');$('wifi').innerHTML=w.length?w.map(n=>`<div class="row"><label>${n}</label><button class="red" onclick="api('/api/wifi',{ssid:'${n.replace(/'/g,"\\'")}',delete:true}).then(r=>{done(r);load()})">✕</button></div>`).join(''):'<div class="row status">Nessuna rete salvata</div>';
+ $('radios').value=await api('/api/radios');
+}
+function addAlarm(){const [h,m]=$('a_time').value.split(':').map(Number);api('/api/alarms',{hour:h,minute:m,days:dayMask,label:$('a_label').value,enabled:true}).then(r=>{done(r);load()})}
+function addWifi(){api('/api/wifi',{ssid:$('w_ssid').value,password:$('w_pass').value}).then(r=>{done(r);$('w_pass').value='';load()})}
+function saveSettings(){const b={};for(const k of['brightness','screen_timeout','volume'])b[k]=+$(k).value;for(const k of['timezone','device_name'])b[k]=$(k).value;for(const k of['always_on','tap_to_wake','wake_on_notification','time_24h','auto_time','ble'])b[k]=$(k).checked;api('/api/settings',b).then(done)}
+function syncTime(){api('/api/time',{epoch:Math.floor(Date.now()/1000)}).then(done)}
+function saveRadios(){api('/api/radios',$('radios').value,true).then(done)}
+async function upload(){const f=$('u_file').files[0],n=$('u_name').value.trim();if(!f||!n)return toast('Scegli nome e file');toast('Caricamento...');const r=await fetch('/api/upload?name='+encodeURIComponent(n),{method:'POST',body:f});done(await r.json())}
+drawDays();load();
+</script>
+</body>
+</html>
