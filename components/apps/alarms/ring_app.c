@@ -1,77 +1,52 @@
 #include "apps_internal.h"
 
 #include "core/clock.h"
-#include "core/sys.h"
-#include "core/settings.h"
 #include "core/state.h"
 #include "services/alarm.h"
-#include "services/radio.h"
 #include "services/sound.h"
 #include "ui/ui.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-
 #include <stdio.h>
+#include <stdlib.h>
 
 /*
- * The ringing alarm, full screen.
+ * The ringing alarm, full screen: time, label, Snooze / Stop.
  *
- * RULE: THE ALARM MUST ALWAYS RING (same invariant as the e-paper clock).
- * With a radio chosen, the stream connects silently; the speaker goes to the
- * radio only once it is buffered. The melody takes over if the radio is not
- * ready within 25 s, fails, or goes silent for 8 s while playing.
+ * The melody gets louder over ~20 s (sound service). The screen stays on,
+ * and the alarm stops by itself after 10 minutes (then it counts as
+ * dismissed). Snooze rings again after 5 minutes.
+ *
+ * arg = alarm_t * allocated by the caller, owned (freed) here.
  */
 
-#define RADIO_START_TIMEOUT_MS  25000
-#define RADIO_SILENCE_MS        8000
-#define AUTO_STOP_MS            (10 * 60 * 1000)
-#define SNOOZE_MINUTES          5
-
-typedef enum
-{
-    SOURCE_MELODY,
-    SOURCE_RADIO_STARTING,
-    SOURCE_RADIO,
-} source_t;
+#define AUTO_STOP_MS    (10 * 60 * 1000)
+#define SNOOZE_MINUTES  5
 
 static alarm_t s_alarm;
-static source_t s_source;
 static uint32_t s_started_ms;
 static lv_timer_t *s_timer = NULL;
 static lv_obj_t *s_time = NULL;
-static lv_obj_t *s_note = NULL;
-static lv_obj_t *s_ring_icon = NULL;
+static lv_obj_t *s_bell = NULL;
+static bool s_done = false;
 
-static void stop_radio_task(void *arg)
+static void finish(bool snooze)
 {
-    (void)arg;
-    radio_player_stop();
-    vTaskDelete(NULL);
-}
+    if (s_done)
+    {
+        return;
+    }
 
-static void stop_sound(void)
-{
+    s_done = true;
     sound_alarm_stop();
 
-    if (s_source != SOURCE_MELODY)
+    if (snooze)
     {
-        /* radio_player_stop() may wait for the network: not in the UI task. */
-        sys_task_create(stop_radio_task, "ring_stop", 3072, NULL, 4, SYS_CORE_ANY);
+        alarm_snooze(s_alarm.id, SNOOZE_MINUTES);
     }
-
-    s_source = SOURCE_MELODY;
-}
-
-static void fall_back_to_melody(const char *why)
-{
-    if (s_source != SOURCE_MELODY)
+    else
     {
-        stop_sound();
+        alarm_dismiss(s_alarm.id);
     }
-
-    lv_label_set_text(s_note, why);
-    sound_alarm_start();
 }
 
 static void tick(lv_timer_t *timer)
@@ -79,43 +54,25 @@ static void tick(lv_timer_t *timer)
     (void)timer;
 
     uint32_t elapsed = lv_tick_elaps(s_started_ms);
-
     struct tm now;
     char text[12];
+
     clock_local(&now);
     clock_format_hm(&now, text, sizeof(text));
     lv_label_set_text(s_time, text);
 
-    /* gentle pulse of the bell */
-    lv_obj_set_style_transform_rotation(s_ring_icon, (elapsed / 120) % 2 ? 120 : -120, 0);
+    /* the bell swings */
+    lv_obj_set_style_transform_rotation(s_bell, (elapsed / 250) % 2 ? 150 : -150, 0);
 
-    if (s_source == SOURCE_RADIO_STARTING)
+    /* If the melody stopped for any reason while ringing, start it again. */
+    if (!s_done && !sound_alarm_playing())
     {
-        radio_state_t st = radio_player_state();
-
-        if (st == RADIO_STATE_READY || st == RADIO_STATE_PLAYING)
-        {
-            radio_player_play();
-            s_source = SOURCE_RADIO;
-            lv_label_set_text(s_note, "");
-        }
-        else if (st == RADIO_STATE_FAILED || elapsed > RADIO_START_TIMEOUT_MS)
-        {
-            fall_back_to_melody("Radio non disponibile");
-        }
-    }
-    else if (s_source == SOURCE_RADIO)
-    {
-        if (radio_player_state() == RADIO_STATE_FAILED || radio_player_silence_ms() > RADIO_SILENCE_MS)
-        {
-            fall_back_to_melody("Radio interrotta");
-        }
+        sound_alarm_start();
     }
 
-    if (elapsed > AUTO_STOP_MS)
+    if (!s_done && elapsed > AUTO_STOP_MS)
     {
-        stop_sound();
-        alarm_dismiss(s_alarm.id);
+        finish(false);
         app_back();
     }
 }
@@ -123,24 +80,33 @@ static void tick(lv_timer_t *timer)
 static void on_snooze(lv_event_t *e)
 {
     (void)e;
-    stop_sound();
-    alarm_snooze(s_alarm.id, SNOOZE_MINUTES);
-    ui_toast("Posticipata di 5 minuti");
-    app_back();
+
+    if (!s_done)
+    {
+        finish(true);
+        ui_toast("Posticipata di 5 minuti");
+        app_back();
+    }
 }
 
 static void on_stop(lv_event_t *e)
 {
     (void)e;
-    stop_sound();
-    alarm_dismiss(s_alarm.id);
-    app_back();
+
+    if (!s_done)
+    {
+        finish(false);
+        app_back();
+    }
 }
 
 static void create(lv_obj_t *screen, void *arg)
 {
     s_alarm = *(const alarm_t *)arg;
+    free(arg);
+
     s_started_ms = lv_tick_get();
+    s_done = false;
 
     lv_obj_set_style_bg_color(screen, lv_color_hex(0x1A0E00), 0);
     lv_obj_set_style_bg_grad_color(screen, lv_color_black(), 0);
@@ -150,12 +116,11 @@ static void create(lv_obj_t *screen, void *arg)
     lv_obj_set_style_pad_all(screen, 24, 0);
     lv_obj_set_style_pad_row(screen, 10, 0);
 
-    s_ring_icon = lv_label_create(screen);
-    lv_label_set_text(s_ring_icon, LV_SYMBOL_BELL);
-    lv_obj_set_style_text_font(s_ring_icon, &lv_font_montserrat_48, 0);
-    lv_obj_set_style_text_color(s_ring_icon, lv_color_hex(UI_COLOR_ORANGE), 0);
-    lv_obj_set_style_transform_pivot_x(s_ring_icon, LV_PCT(50), 0);
-    lv_obj_set_style_transform_pivot_y(s_ring_icon, 0, 0);
+    s_bell = lv_label_create(screen);
+    lv_label_set_text(s_bell, LV_SYMBOL_BELL);
+    lv_obj_set_style_text_font(s_bell, &lv_font_montserrat_48, 0);
+    lv_obj_set_style_text_color(s_bell, lv_color_hex(UI_COLOR_ORANGE), 0);
+    lv_obj_set_style_transform_pivot_x(s_bell, LV_PCT(50), 0);
 
     s_time = lv_label_create(screen);
     lv_obj_set_style_text_font(s_time, ui_font_clock, 0);
@@ -164,36 +129,13 @@ static void create(lv_obj_t *screen, void *arg)
     lv_label_set_text(label, s_alarm.label[0] != '\0' ? s_alarm.label : "Sveglia");
     lv_obj_set_style_text_font(label, UI_FONT_LARGE, 0);
 
-    s_note = lv_label_create(screen);
-    lv_label_set_text(s_note, "");
-    lv_obj_set_style_text_color(s_note, lv_color_hex(UI_COLOR_TEXT_DIM), 0);
-    lv_obj_set_style_text_font(s_note, UI_FONT_SMALL, 0);
-
     lv_obj_t *snooze = ui_button(screen, "Posticipa", UI_COLOR_CARD_HI, on_snooze, NULL);
-    lv_obj_set_style_margin_top(snooze, 20, 0);
+    lv_obj_set_style_margin_top(snooze, 24, 0);
     ui_button(screen, "Stop", UI_COLOR_ORANGE, on_stop, NULL);
 
-    /* Start the sound. */
-    radio_info_t info;
+    sound_alarm_start();
 
-    if (radio_is_on())
-    {
-        radio_stop();   /* the melody waits for the speaker */
-    }
-
-    if (s_alarm.radio >= 0 && radio_get(s_alarm.radio, &info) &&
-        radio_player_start(info.url, settings_get()->volume < 50 ? 60 : settings_get()->volume, false) == ESP_OK)
-    {
-        s_source = SOURCE_RADIO_STARTING;
-        lv_label_set_text_fmt(s_note, "Sintonizzo %s...", info.name);
-    }
-    else
-    {
-        s_source = SOURCE_MELODY;
-        sound_alarm_start();
-    }
-
-    s_timer = lv_timer_create(tick, 250, NULL);
+    s_timer = lv_timer_create(tick, 500, NULL);
     tick(s_timer);
 }
 
@@ -205,14 +147,13 @@ static void destroy(void)
         s_timer = NULL;
     }
 
-    stop_sound();
+    finish(false);   /* closed any other way (home, auto-home): stop ringing */
 }
 
-/* Back (BOOT / swipe) = stop; the app manager then closes the screen. */
+/* Back (BOOT) = stop; the app manager then closes the screen. */
 static bool back(void)
 {
-    stop_sound();
-    alarm_dismiss(s_alarm.id);
+    finish(false);
     return false;
 }
 
@@ -221,7 +162,7 @@ const app_t ring_app = {
     .name = "Sveglia",
     .icon = LV_SYMBOL_BELL,
     .color = UI_COLOR_ORANGE,
-    .flags = APP_FLAG_HIDDEN | APP_FLAG_KEEP_SCREEN_ON | APP_FLAG_STAY_ON_WAKE,
+    .flags = APP_FLAG_HIDDEN | APP_FLAG_KEEP_SCREEN_ON | APP_FLAG_STAY_ON_WAKE | APP_FLAG_NO_BACK_GESTURE,
     .create = create,
     .destroy = destroy,
     .back = back,

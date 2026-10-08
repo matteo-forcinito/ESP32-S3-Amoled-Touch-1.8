@@ -1,6 +1,7 @@
 #include "services/wifi.h"
 
 #include "core/state.h"
+#include "core/sys.h"
 
 #include "hardware/sdcard.h"
 
@@ -280,7 +281,7 @@ static void radio_off(void)
     ESP_LOGI(TAG, "Off");
 }
 
-static void off_timer_cb(void *arg)
+static void off_job(void *arg)
 {
     (void)arg;
 
@@ -292,6 +293,13 @@ static void off_timer_cb(void *arg)
     }
 
     xSemaphoreGive(s_mutex);
+}
+
+/* esp_timer task: esp_wifi_stop() blocks, so it runs in the sys worker. */
+static void off_timer_cb(void *arg)
+{
+    (void)arg;
+    sys_post(off_job, NULL);
 }
 
 /* Join one network. Called with the mutex held. */

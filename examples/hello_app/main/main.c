@@ -12,6 +12,7 @@
 #include "core/lv_port.h"
 #include "core/power.h"
 #include "core/settings.h"
+#include "core/sys.h"
 #include "extapp_sdk.h"
 #include "hardware/board.h"
 #include "ui/ui.h"
@@ -34,6 +35,7 @@ static bool home_back(void)
 void app_main(void)
 {
     extapp_sdk_init();   /* any restart from now on goes back to the launcher */
+    sys_worker_init();
 
     settings_init();
     board_init();

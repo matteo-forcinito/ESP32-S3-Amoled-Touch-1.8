@@ -2,5 +2,8 @@
 # (and, through the board layer in components/hardware, its sister boards).
 cmake_minimum_required(VERSION 3.16)
 
+# The web radio engine is used by the external WebRadio app, not by the base system.
+set(EXCLUDE_COMPONENTS "webradio")
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(amoled_watch)

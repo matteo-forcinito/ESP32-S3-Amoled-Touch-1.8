@@ -3,7 +3,6 @@
 #include "core/clock.h"
 #include "core/state.h"
 #include "services/alarm.h"
-#include "services/radio.h"
 #include "ui/ui.h"
 
 #include <stdio.h>
@@ -126,9 +125,6 @@ typedef struct
     lv_obj_t *minute;
     lv_obj_t *days[7];
     lv_obj_t *label_row;
-    lv_obj_t *sound_row;
-    int favorites[RADIO_FAVORITES_MAX];
-    int favorite_count;
 } editor_t;
 
 static editor_t *s_ed = NULL;
@@ -141,45 +137,6 @@ static void build_numbers(char *out, size_t size, int count)
     {
         used += (size_t)snprintf(out + used, size - used, i == 0 ? "%02d" : "\n%02d", i);
     }
-}
-
-static void update_sound_row(void)
-{
-    radio_info_t info;
-    const char *text = "Melodia";
-
-    if (s_ed->alarm.radio >= 0 && radio_get(s_ed->alarm.radio, &info))
-    {
-        text = info.name;
-    }
-
-    lv_label_set_text(ui_row_value(s_ed->sound_row), text);
-}
-
-static void on_sound(lv_event_t *e)
-{
-    (void)e;
-
-    /* Cycle: melody -> each favorite radio -> melody. */
-    int next = -1;
-
-    if (s_ed->alarm.radio < 0)
-    {
-        next = s_ed->favorite_count > 0 ? s_ed->favorites[0] : -1;
-    }
-    else
-    {
-        for (int i = 0; i < s_ed->favorite_count; i++)
-        {
-            if (s_ed->favorites[i] == s_ed->alarm.radio)
-            {
-                next = i + 1 < s_ed->favorite_count ? s_ed->favorites[i + 1] : -1;
-            }
-        }
-    }
-
-    s_ed->alarm.radio = (int16_t)next;
-    update_sound_row();
 }
 
 static void label_entered(const char *text, void *user_data)
@@ -276,8 +233,6 @@ static void edit_create(lv_obj_t *screen, void *arg)
         snprintf(s_ed->alarm.label, sizeof(s_ed->alarm.label), "Sveglia");
     }
 
-    s_ed->favorite_count = radio_favorites(s_ed->favorites, RADIO_FAVORITES_MAX);
-
     lv_obj_t *page = ui_page(screen, id == 0 ? "Nuova sveglia" : "Modifica");
 
     lv_obj_t *wheels = lv_obj_create(page);
@@ -325,8 +280,6 @@ static void edit_create(lv_obj_t *screen, void *arg)
     ui_text(page, "Nessun giorno = suona una volta sola.", true);
 
     s_ed->label_row = ui_row(page, LV_SYMBOL_EDIT, UI_COLOR_GRAY, "Nome", s_ed->alarm.label, on_label, NULL);
-    s_ed->sound_row = ui_row(page, LV_SYMBOL_AUDIO, UI_COLOR_PINK, "Suono", "", on_sound, NULL);
-    update_sound_row();
 
     ui_button(page, "Salva", UI_COLOR_ORANGE, on_save, NULL);
 

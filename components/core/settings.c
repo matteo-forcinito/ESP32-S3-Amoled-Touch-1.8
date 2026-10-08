@@ -1,6 +1,7 @@
 #include "core/settings.h"
 
 #include "core/state.h"
+#include "core/sys.h"
 
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -20,6 +21,8 @@ static settings_t s_settings;
 static esp_timer_handle_t s_save_timer = NULL;
 static portMUX_TYPE s_lock = portMUX_INITIALIZER_UNLOCKED;
 static bool s_dirty = false;
+static settings_listener_t s_listeners[6];
+static int s_listener_count = 0;
 
 static void set_defaults(settings_t *s)
 {
@@ -103,10 +106,17 @@ static void write_now(void)
     ESP_LOGI(TAG, "Saved (%s)", esp_err_to_name(err));
 }
 
-static void save_timer_cb(void *arg)
+static void write_job(void *arg)
 {
     (void)arg;
     write_now();
+}
+
+/* esp_timer task: the flash write happens in the sys worker. */
+static void save_timer_cb(void *arg)
+{
+    (void)arg;
+    sys_post(write_job, NULL);
 }
 
 esp_err_t settings_init(void)
@@ -177,6 +187,19 @@ void settings_save(const settings_t *settings)
     }
 
     state_bump(STATE_SETTINGS_VERSION);
+
+    for (int i = 0; i < s_listener_count; i++)
+    {
+        s_listeners[i](&copy);
+    }
+}
+
+void settings_add_listener(settings_listener_t listener)
+{
+    if (s_listener_count < (int)(sizeof(s_listeners) / sizeof(s_listeners[0])))
+    {
+        s_listeners[s_listener_count++] = listener;
+    }
 }
 
 void settings_flush(void)

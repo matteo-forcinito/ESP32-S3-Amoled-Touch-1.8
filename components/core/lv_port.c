@@ -18,7 +18,7 @@
 
 static const char *TAG = "lv_port";
 
-#define TASK_STACK        (8 * 1024)
+#define TASK_STACK        (12 * 1024)
 #define TASK_PRIORITY     4
 #define TASK_CORE         1
 #define MAX_SLEEP_MS      1000

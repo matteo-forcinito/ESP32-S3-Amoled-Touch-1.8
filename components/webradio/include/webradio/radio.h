@@ -18,7 +18,7 @@
 #include <stddef.h>
 
 #include "esp_err.h"
-#include "services/radio_player.h"
+#include "webradio/radio_player.h"
 
 #define RADIO_FAVORITES_MAX 12
 

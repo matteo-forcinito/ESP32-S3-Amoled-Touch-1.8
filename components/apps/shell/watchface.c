@@ -5,7 +5,7 @@
 #include "core/settings.h"
 #include "core/state.h"
 #include "services/alarm.h"
-#include "services/radio.h"
+#include "companion/ble_companion.h"
 #include "services/weather.h"
 #include "ui/ui.h"
 
@@ -18,7 +18,7 @@
  *             MER 8 OTT               date (accent)
  *              14:05                  huge light digits
  *     ( 82% )  ( ☁ 18° )  ( ⏰ 7:30 )  complications (tap to open)
- *            ♪ m2o                    shown while the radio plays
+ *          ♪ song                     shown while the phone plays music
  *
  * Everything redraws from state observers: once a minute for the time, and
  * only when something actually changes for the rest.
@@ -37,8 +37,8 @@ typedef struct
     lv_obj_t *weather_icon;
     lv_obj_t *weather_label;
     lv_obj_t *alarm_label;
-    lv_obj_t *radio_pill;
-    lv_obj_t *radio_label;
+    lv_obj_t *music_pill;
+    lv_obj_t *music_label;
 } face_t;
 
 static face_t s_face;
@@ -158,19 +158,19 @@ static void update_alarm(lv_observer_t *observer, lv_subject_t *subject)
     }
 }
 
-static void update_radio(lv_observer_t *observer, lv_subject_t *subject)
+static void update_music(lv_observer_t *observer, lv_subject_t *subject)
 {
     (void)observer;
     (void)subject;
 
-    radio_info_t info;
-    bool on = radio_is_on() && radio_get(radio_current(), &info);
+    ble_music_t music;
+    bool on = ble_companion_connected() && ble_companion_music(&music) && music.playing;
 
-    lv_obj_set_hidden(s_face.radio_pill, !on);
+    lv_obj_set_hidden(s_face.music_pill, !on);
 
     if (on)
     {
-        lv_label_set_text_fmt(s_face.radio_label, LV_SYMBOL_AUDIO "  %s", info.name);
+        lv_label_set_text_fmt(s_face.music_label, LV_SYMBOL_AUDIO "  %s", music.track);
     }
 }
 
@@ -289,21 +289,21 @@ void watchface_create(lv_obj_t *parent)
     s_face.alarm_label = lv_label_create(alarm);
     lv_obj_set_style_text_font(s_face.alarm_label, UI_FONT_SMALL, 0);
 
-    /* radio pill */
-    s_face.radio_pill = lv_obj_create(root);
-    ui_make_card(s_face.radio_pill);
-    lv_obj_set_clickable(s_face.radio_pill, true);
-    lv_obj_set_style_radius(s_face.radio_pill, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_pad_hor(s_face.radio_pill, 20, 0);
-    lv_obj_set_size(s_face.radio_pill, LV_SIZE_CONTENT, 48);
-    lv_obj_set_style_max_width(s_face.radio_pill, 300, 0);
-    lv_obj_align(s_face.radio_pill, LV_ALIGN_BOTTOM_MID, 0, -26);
-    lv_obj_add_event_cb(s_face.radio_pill, apps_open_cb, LV_EVENT_CLICKED, (void *)"radio");
-    s_face.radio_label = lv_label_create(s_face.radio_pill);
-    lv_label_set_long_mode(s_face.radio_label, LV_LABEL_LONG_MODE_DOTS);
-    lv_obj_set_style_max_width(s_face.radio_label, 260, 0);
-    lv_obj_set_style_text_color(s_face.radio_label, ui_accent(), 0);
-    lv_obj_center(s_face.radio_label);
+    /* phone music pill */
+    s_face.music_pill = lv_obj_create(root);
+    ui_make_card(s_face.music_pill);
+    lv_obj_set_clickable(s_face.music_pill, true);
+    lv_obj_set_style_radius(s_face.music_pill, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_pad_hor(s_face.music_pill, 20, 0);
+    lv_obj_set_size(s_face.music_pill, LV_SIZE_CONTENT, 48);
+    lv_obj_set_style_max_width(s_face.music_pill, 300, 0);
+    lv_obj_align(s_face.music_pill, LV_ALIGN_BOTTOM_MID, 0, -26);
+    lv_obj_add_event_cb(s_face.music_pill, apps_open_cb, LV_EVENT_CLICKED, (void *)"music");
+    s_face.music_label = lv_label_create(s_face.music_pill);
+    lv_label_set_long_mode(s_face.music_label, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_style_max_width(s_face.music_label, 260, 0);
+    lv_obj_set_style_text_color(s_face.music_label, ui_accent(), 0);
+    lv_obj_center(s_face.music_label);
 
     /* observers: removed automatically when `root` is deleted */
     lv_subject_add_observer_obj(state_subject(STATE_MINUTE), update_time, root, NULL);
@@ -315,8 +315,8 @@ void watchface_create(lv_obj_t *parent)
     lv_subject_add_observer_obj(state_subject(STATE_WEATHER_VERSION), update_weather, root, NULL);
     lv_subject_add_observer_obj(state_subject(STATE_ALARM_VERSION), update_alarm, root, NULL);
     lv_subject_add_observer_obj(state_subject(STATE_MINUTE), update_alarm, root, NULL);
-    lv_subject_add_observer_obj(state_subject(STATE_RADIO), update_radio, root, NULL);
-    lv_subject_add_observer_obj(state_subject(STATE_RADIO_VERSION), update_radio, root, NULL);
+    lv_subject_add_observer_obj(state_subject(STATE_MUSIC_VERSION), update_music, root, NULL);
+    lv_subject_add_observer_obj(state_subject(STATE_BLE), update_music, root, NULL);
     lv_subject_add_observer_obj(state_subject(STATE_SCREEN), screen_changed, root, NULL);
 }
 

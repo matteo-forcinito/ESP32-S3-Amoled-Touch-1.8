@@ -18,6 +18,7 @@ idf_component_register(
         esp_timer
     PRIV_REQUIRES
         nvs_flash
+        espcoredump
         esp_pm
         esp_hw_support
 )

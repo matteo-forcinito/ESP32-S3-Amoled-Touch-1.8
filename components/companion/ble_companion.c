@@ -1,8 +1,9 @@
-#include "services/ble_companion.h"
+#include "companion/ble_companion.h"
 
 #include "core/clock.h"
 #include "core/power.h"
 #include "core/settings.h"
+#include "core/sys.h"
 #include "core/state.h"
 #include "hardware/board.h"
 #include "hardware/pmu.h"
@@ -22,6 +23,7 @@
 #include "nimble/nimble_port_freertos.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
+#include "store/config/ble_store_config.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,9 +31,16 @@
 
 static const char *TAG = "ble";
 
+/* NimBLE store (bonds in NVS); declared here because its header does not. */
+void ble_store_config_init(void);
+
 #define BLE_LINE_MAX            1536
-#define ADV_INTERVAL_MIN    1600    /* x 0.625 ms = 1.0 s */
-#define ADV_INTERVAL_MAX    2400    /* 1.5 s */
+#define ADV_FAST_MIN        160     /* x 0.625 ms = 100 ms: easy to find while pairing */
+#define ADV_FAST_MAX        240     /* 150 ms */
+#define ADV_SLOW_MIN        1600    /* 1.0 s: cheap, the phone reconnects anyway */
+#define ADV_SLOW_MAX        2400    /* 1.5 s */
+#define ADV_FAST_US         (60LL * 1000 * 1000)
+#define RETRY_US            (30LL * 1000 * 1000)
 #define STATUS_PERIOD_US    (10LL * 60 * 1000 * 1000)
 
 /* Nordic UART Service, 6E40000x-B5A3-F393-E0A9-E50E24DCCA9E (bytes little endian). */
@@ -51,6 +60,9 @@ static size_t s_line_len = 0;
 static ble_music_t s_music;
 static portMUX_TYPE s_lock = portMUX_INITIALIZER_UNLOCKED;
 static esp_timer_handle_t s_status_timer = NULL;
+static esp_timer_handle_t s_slow_timer = NULL;    /* fast advertising -> slow */
+static esp_timer_handle_t s_retry_timer = NULL;   /* NimBLE could not start: try again */
+static bool s_fast = true;
 
 static void start_advertising(void);
 
@@ -391,7 +403,8 @@ static int gap_event(struct ble_gap_event *event, void *arg)
             s_conn = BLE_HS_CONN_HANDLE_NONE;
             s_line_len = 0;
             esp_timer_stop(s_status_timer);
-            ESP_LOGI(TAG, "Phone disconnected");
+            ESP_LOGI(TAG, "Phone disconnected (reason %d)", event->disconnect.reason);
+            s_fast = true;
             start_advertising();
             break;
 
@@ -402,6 +415,23 @@ static int gap_event(struct ble_gap_event *event, void *arg)
                 ble_companion_send_status();
             }
             break;
+
+        case BLE_GAP_EVENT_ENC_CHANGE:
+            ESP_LOGI(TAG, "Link encrypted: %d", event->enc_change.status);
+            break;
+
+        case BLE_GAP_EVENT_REPEAT_PAIRING:
+        {
+            /* The phone forgot us and pairs again: drop the old bond and accept. */
+            struct ble_gap_conn_desc desc;
+
+            if (ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc) == 0)
+            {
+                ble_store_util_delete_peer(&desc.peer_id_addr);
+            }
+
+            return BLE_GAP_REPEAT_PAIRING_RETRY;
+        }
 
         case BLE_GAP_EVENT_ADV_COMPLETE:
             start_advertising();
@@ -439,8 +469,8 @@ static void start_advertising(void)
     struct ble_gap_adv_params params = {
         .conn_mode = BLE_GAP_CONN_MODE_UND,
         .disc_mode = BLE_GAP_DISC_MODE_GEN,
-        .itvl_min = ADV_INTERVAL_MIN,
-        .itvl_max = ADV_INTERVAL_MAX,
+        .itvl_min = s_fast ? ADV_FAST_MIN : ADV_SLOW_MIN,
+        .itvl_max = s_fast ? ADV_FAST_MAX : ADV_SLOW_MAX,
     };
 
     int rc = ble_gap_adv_start(s_own_addr_type, NULL, BLE_HS_FOREVER, &params, gap_event, NULL);
@@ -474,10 +504,54 @@ static void host_task(void *arg)
     nimble_port_freertos_deinit();
 }
 
-static void status_timer_cb(void *arg)
+static void status_job(void *arg)
 {
     (void)arg;
     ble_companion_send_status();
+}
+
+/* esp_timer task: build and send the message in the sys worker. */
+static void status_timer_cb(void *arg)
+{
+    (void)arg;
+    sys_post(status_job, NULL);
+}
+
+static void slow_job(void *arg)
+{
+    (void)arg;
+
+    if (s_running && s_fast && s_conn == BLE_HS_CONN_HANDLE_NONE)
+    {
+        s_fast = false;
+        ble_gap_adv_stop();
+        start_advertising();
+        ESP_LOGI(TAG, "Slow advertising");
+    }
+}
+
+static void slow_timer_cb(void *arg)
+{
+    (void)arg;
+    sys_post(slow_job, NULL);
+}
+
+static esp_err_t start(void);
+
+static void retry_job(void *arg)
+{
+    (void)arg;
+
+    if (settings_get()->ble_enabled && !s_running)
+    {
+        start();
+    }
+}
+
+static void retry_timer_cb(void *arg)
+{
+    (void)arg;
+    sys_post(retry_job, NULL);
 }
 
 /* ------------------------------------------------------------- public */
@@ -489,16 +563,29 @@ static esp_err_t start(void)
         return ESP_OK;
     }
 
+    sys_heap_log("ble start");
     esp_err_t err = nimble_port_init();
 
     if (err != ESP_OK)
     {
-        ESP_LOGE(TAG, "NimBLE init: %s", esp_err_to_name(err));
+        ESP_LOGE(TAG, "NimBLE init: %s (retrying in 30 s)", esp_err_to_name(err));
+        esp_timer_stop(s_retry_timer);
+        esp_timer_start_once(s_retry_timer, RETRY_US);
         return err;
     }
 
     ble_hs_cfg.sync_cb = on_sync;
     ble_hs_cfg.reset_cb = on_reset;
+
+    /* "Just works" pairing with bonding: accepted if the phone asks for it. */
+    ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+    ble_hs_cfg.sm_io_cap = BLE_SM_IO_CAP_NO_IO;
+    ble_hs_cfg.sm_bonding = 1;
+    ble_hs_cfg.sm_mitm = 0;
+    ble_hs_cfg.sm_sc = 1;
+    ble_hs_cfg.sm_our_key_dist = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
+    ble_hs_cfg.sm_their_key_dist = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
+    ble_store_config_init();
 
     ble_svc_gap_init();
     ble_svc_gatt_init();
@@ -507,6 +594,9 @@ static esp_err_t start(void)
     ble_svc_gap_device_name_set(settings_get()->device_name);
 
     s_running = true;
+    s_fast = true;
+    esp_timer_stop(s_slow_timer);
+    esp_timer_start_once(s_slow_timer, ADV_FAST_US);
     nimble_port_freertos_init(host_task);
     ESP_LOGI(TAG, "Bluetooth on as \"%s\"", settings_get()->device_name);
 
@@ -530,6 +620,8 @@ static void stop(void)
 
     ble_gap_adv_stop();
     esp_timer_stop(s_status_timer);
+    esp_timer_stop(s_slow_timer);
+    esp_timer_stop(s_retry_timer);
 
     if (nimble_port_stop() == 0)
     {
@@ -539,6 +631,37 @@ static void stop(void)
     s_conn = BLE_HS_CONN_HANDLE_NONE;
     state_set(STATE_BLE, STATE_BLE_OFF);
     ESP_LOGI(TAG, "Bluetooth off");
+}
+
+static void apply_enabled_job(void *arg)
+{
+    bool enable = arg != NULL;
+
+    if (enable != s_running)
+    {
+        ble_companion_enable(enable);
+    }
+}
+
+/* Bluetooth switched on/off anywhere (settings page, web page, control center). */
+static void settings_changed(const settings_t *settings)
+{
+    if (settings->ble_enabled != s_running)
+    {
+        sys_post(apply_enabled_job, settings->ble_enabled ? (void *)1 : NULL);
+    }
+}
+
+static void restart_job(void *arg)
+{
+    (void)arg;
+    ble_companion_enable(false);
+    ble_companion_enable(settings_get()->ble_enabled);
+}
+
+void ble_companion_restart(void)
+{
+    sys_post(restart_job, NULL);
 }
 
 esp_err_t ble_companion_init(void)
@@ -552,8 +675,13 @@ esp_err_t ble_companion_init(void)
 
     const esp_timer_create_args_t args = {.callback = status_timer_cb, .name = "ble_status"};
     esp_timer_create(&args, &s_status_timer);
+    const esp_timer_create_args_t slow_args = {.callback = slow_timer_cb, .name = "ble_slow"};
+    esp_timer_create(&slow_args, &s_slow_timer);
+    const esp_timer_create_args_t retry_args = {.callback = retry_timer_cb, .name = "ble_retry"};
+    esp_timer_create(&retry_args, &s_retry_timer);
 
     state_set(STATE_BLE, STATE_BLE_OFF);
+    settings_add_listener(settings_changed);
 
     return settings_get()->ble_enabled ? start() : ESP_OK;
 }

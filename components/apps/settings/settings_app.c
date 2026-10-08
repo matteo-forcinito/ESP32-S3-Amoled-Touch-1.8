@@ -9,7 +9,7 @@
 #include "hardware/board.h"
 #include "hardware/pmu.h"
 #include "hardware/sdcard.h"
-#include "services/ble_companion.h"
+#include "companion/ble_companion.h"
 #include "services/sound.h"
 #include "services/time_sync.h"
 #include "services/wifi.h"
@@ -462,8 +462,7 @@ static void ble_status_update(lv_observer_t *observer, lv_subject_t *subject)
 static void set_ble(lv_event_t *e)
 {
     bool on = switch_on(e);
-    EDIT_SETTINGS(s->ble_enabled = on);
-    ble_companion_enable(on);
+    EDIT_SETTINGS(s->ble_enabled = on);   /* the companion follows the setting */
 }
 
 static void name_entered(const char *text, void *user_data)
@@ -473,8 +472,7 @@ static void name_entered(const char *text, void *user_data)
     if (text != NULL && text[0] != '\0')
     {
         EDIT_SETTINGS(snprintf(s->device_name, sizeof(s->device_name), "%s", text));
-        ble_companion_enable(false);
-        ble_companion_enable(settings_get()->ble_enabled);
+        ble_companion_restart();
         ui_toast("Nome aggiornato");
     }
 }
@@ -742,13 +740,14 @@ static void about_update(lv_timer_t *timer)
                           "PSRAM libera: %u KB\n"
                           "SD: %s\n"
                           "IP: %s\n"
-                          "Acceso da: %lldh %02lldm",
+                          "Acceso da: %lldh %02lldm\n"
+                          "Ultimo avvio: %s",
                           board_info()->name, esp_app_get_description()->version, esp_get_idf_version(),
                           pmu_battery_percent(), pmu_battery_mv(), pmu_is_charging() ? " (in carica)" : "",
                           (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024),
                           (unsigned)(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) / 1024),
                           (unsigned)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024),
-                          sd, ip, uptime / 3600, (uptime / 60) % 60);
+                          sd, ip, uptime / 3600, (uptime / 60) % 60, sys_last_reset_text());
 }
 
 static void about_create(lv_obj_t *screen, void *arg)

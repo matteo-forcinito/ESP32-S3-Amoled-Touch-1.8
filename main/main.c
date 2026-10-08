@@ -17,9 +17,8 @@
 #include "core/settings.h"
 #include "core/sys.h"
 #include "hardware/board.h"
-#include "services/ble_companion.h"
+#include "companion/ble_companion.h"
 #include "services/notify.h"
-#include "services/radio.h"
 #include "services/sound.h"
 #include "services/time_sync.h"
 #include "services/weather.h"
@@ -38,6 +37,8 @@ void app_main(void)
     /* We are the launcher: if an external app ran before, it set us as boot app. */
     esp_ota_mark_app_valid_cancel_rollback();
 
+    sys_check_last_reset();
+    sys_worker_init();   /* background jobs for timers, first of all */
     ESP_ERROR_CHECK(settings_init());
     ESP_ERROR_CHECK(board_init());
     ESP_ERROR_CHECK(lv_port_init());
@@ -49,12 +50,17 @@ void app_main(void)
     weather_init();
     sound_service_init();
     ESP_ERROR_CHECK(wifi_service_init());
-    radio_service_init();
     sys_heap_log("services");
 
     lv_port_lock();
     ui_init();
     apps_init();
+
+    if (sys_last_reset_was_crash())
+    {
+        ui_toast("Riavviato dopo un errore (vedi Impostazioni > Info)");
+    }
+
     lv_port_unlock();
     sys_heap_log("ui");
 

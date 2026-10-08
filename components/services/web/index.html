@@ -53,9 +53,6 @@ button.ghost{background:var(--hi)}button.red{background:var(--red)}.status{color
  <div class="row"><button onclick="saveSettings()">Salva</button><button class="ghost" onclick="syncTime()">Ora dal browser</button></div>
 </div>
 
-<h2>Radio (radios.txt)</h2>
-<div class="card"><div class="row" style="display:block"><textarea id="radios"></textarea></div>
- <div class="row"><button onclick="saveRadios()">Salva stazioni</button></div></div>
 
 <h2>App esterne</h2>
 <div class="card">
@@ -78,13 +75,11 @@ async function load(){
  for(const k of['always_on','tap_to_wake','wake_on_notification','time_24h','auto_time','ble'])$(k).checked=st[k];
  const al=await api('/api/alarms');$('alarms').innerHTML=al.length?al.map(a=>`<div class="row"><label><b>${String(a.hour).padStart(2,'0')}:${String(a.minute).padStart(2,'0')}</b> ${a.label}<br><small class="status">${dayText(a.days)}</small></label><input type="checkbox" ${a.enabled?'checked':''} onchange="api('/api/alarms',{id:${a.id},enabled:this.checked}).then(done)"><button class="red" onclick="api('/api/alarms',{id:${a.id},delete:true}).then(r=>{done(r);load()})">✕</button></div>`).join(''):'<div class="row status">Nessuna sveglia</div>';
  const w=await api('/api/wifi');$('wifi').innerHTML=w.length?w.map(n=>`<div class="row"><label>${n}</label><button class="red" onclick="api('/api/wifi',{ssid:'${n.replace(/'/g,"\\'")}',delete:true}).then(r=>{done(r);load()})">✕</button></div>`).join(''):'<div class="row status">Nessuna rete salvata</div>';
- $('radios').value=await api('/api/radios');
 }
 function addAlarm(){const [h,m]=$('a_time').value.split(':').map(Number);api('/api/alarms',{hour:h,minute:m,days:dayMask,label:$('a_label').value,enabled:true}).then(r=>{done(r);load()})}
 function addWifi(){api('/api/wifi',{ssid:$('w_ssid').value,password:$('w_pass').value}).then(r=>{done(r);$('w_pass').value='';load()})}
 function saveSettings(){const b={};for(const k of['brightness','screen_timeout','volume'])b[k]=+$(k).value;for(const k of['timezone','device_name'])b[k]=$(k).value;for(const k of['always_on','tap_to_wake','wake_on_notification','time_24h','auto_time','ble'])b[k]=$(k).checked;api('/api/settings',b).then(done)}
 function syncTime(){api('/api/time',{epoch:Math.floor(Date.now()/1000)}).then(done)}
-function saveRadios(){api('/api/radios',$('radios').value,true).then(done)}
 async function upload(){const f=$('u_file').files[0],n=$('u_name').value.trim();if(!f||!n)return toast('Scegli nome e file');toast('Caricamento...');const r=await fetch('/api/upload?name='+encodeURIComponent(n),{method:'POST',body:f});done(await r.json())}
 drawDays();load();
 </script>

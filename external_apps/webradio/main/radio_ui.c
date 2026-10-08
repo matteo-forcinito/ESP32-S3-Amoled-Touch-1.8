@@ -1,8 +1,8 @@
-#include "apps_internal.h"
+#include "core/app.h"
 
 #include "core/settings.h"
 #include "core/state.h"
-#include "services/radio.h"
+#include "webradio/radio.h"
 #include "ui/ui.h"
 
 #include <stdlib.h>
@@ -20,8 +20,8 @@
  *   Preferite       ★ rows
  *   Tutte           rows (long press = add/remove favorite)
  *
- * The radio keeps playing when the app is closed (the watch face shows a
- * "♪ station" pill). Nothing here blocks: commands go to the radio worker.
+ * This is the home screen of the external Web Radio app (BOOT = back to the
+ * launcher). Nothing here blocks: commands go to the radio worker.
  */
 
 #define MAX_ROWS 128

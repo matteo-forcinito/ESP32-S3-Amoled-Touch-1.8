@@ -8,7 +8,6 @@ idf_component_register(
         "shell/control_center.c"
         "shell/notifications.c"
         "shell/now_playing.c"
-        "radio/radio_app.c"
         "alarms/alarms_app.c"
         "alarms/ring_app.c"
         "weather/weather_app.c"
@@ -17,6 +16,7 @@ idf_component_register(
         "web/web_app.c"
         "extapps/extapps_app.c"
         "timer/timer_app.c"
+        "usb/usb_drive_app.c"
     INCLUDE_DIRS
         "include"
     PRIV_INCLUDE_DIRS
@@ -26,7 +26,10 @@ idf_component_register(
     PRIV_REQUIRES
         ui
         services
+        companion
         hardware
+        esp_pm
+        esp_tinyusb
         esp_timer
         esp_app_format
 )

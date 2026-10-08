@@ -1,6 +1,7 @@
 #include "services/alarm.h"
 
 #include "core/state.h"
+#include "core/sys.h"
 #include "hardware/sdcard.h"
 
 #include "cJSON.h"
@@ -211,8 +212,9 @@ static time_t next_ring(const alarm_t *a, time_t now)
 }
 
 static void reschedule(void);
+static void timer_cb(void *arg);
 
-static void timer_cb(void *arg)
+static void check_job(void *arg)
 {
     (void)arg;
 
@@ -280,6 +282,13 @@ static void timer_cb(void *arg)
     }
 
     reschedule();
+}
+
+/* esp_timer task: the check (NVS writes, time math, ring callback) runs in the sys worker. */
+static void timer_cb(void *arg)
+{
+    (void)arg;
+    sys_post(check_job, NULL);
 }
 
 static void reschedule(void)

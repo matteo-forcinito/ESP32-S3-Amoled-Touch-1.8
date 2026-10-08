@@ -1,6 +1,6 @@
 #include "services/weather.h"
 
-#include "http_stream.h"
+#include "services/http_stream.h"
 #include "core/sys.h"
 
 #include "core/settings.h"

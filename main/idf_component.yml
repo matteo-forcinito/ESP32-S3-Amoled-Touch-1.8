@@ -1,12 +1,4 @@
-## IDF Component Manager manifest: downloaded by `idf.py build` into
-## managed_components/ (not committed).
+## Each component declares its own downloads (components/*/idf_component.yml).
 dependencies:
   idf:
     version: ">=6.0"
-  lvgl/lvgl: "^9.2"
-  espressif/esp_lcd_sh8601: "*"
-  espressif/esp_lcd_touch_ft5x06: "*"
-  espressif/esp_codec_dev: "^1.6.2"
-  espressif/esp_audio_codec: "^2.3.0"
-  espressif/cjson: "*"
-  espressif/mdns: "*"

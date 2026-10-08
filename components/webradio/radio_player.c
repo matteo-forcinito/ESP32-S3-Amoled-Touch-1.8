@@ -1,8 +1,8 @@
-#include "services/radio_player.h"
+#include "webradio/radio_player.h"
 
 #include "hls.h"
 #include "core/sys.h"
-#include "http_stream.h"
+#include "services/http_stream.h"
 #include "stream_format.h"
 
 #include "core/power.h"

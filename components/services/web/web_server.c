@@ -6,8 +6,6 @@
 #include "hardware/pmu.h"
 #include "hardware/sdcard.h"
 #include "services/alarm.h"
-#include "services/ble_companion.h"
-#include "services/radio.h"
 #include "services/wifi.h"
 
 #include "cJSON.h"
@@ -172,7 +170,6 @@ static esp_err_t handle_settings(httpd_req_t *req)
     }
 
     settings_t s = *settings_get();
-    bool ble_before = s.ble_enabled;
 
     s.brightness = (uint8_t)get_int(json, "brightness", s.brightness);
     s.screen_timeout_s = (uint8_t)get_int(json, "screen_timeout", s.screen_timeout_s);
@@ -191,11 +188,6 @@ static esp_err_t handle_settings(httpd_req_t *req)
     settings_save(&s);
     clock_set_timezone(s.timezone);
     power_settings_changed();
-
-    if (ble_before != s.ble_enabled)
-    {
-        ble_companion_enable(s.ble_enabled);
-    }
 
     return send_ok(req, true, NULL);
 }
@@ -310,40 +302,6 @@ static esp_err_t handle_alarm_save(httpd_req_t *req)
     return send_ok(req, err == ESP_OK, err == ESP_OK ? NULL : esp_err_to_name(err));
 }
 
-static esp_err_t handle_radios_get(httpd_req_t *req)
-{
-    char *text = radio_export_text();
-    httpd_resp_set_type(req, "text/plain; charset=utf-8");
-    esp_err_t err = httpd_resp_sendstr(req, text != NULL ? text : "");
-    free(text);
-    return err;
-}
-
-static esp_err_t handle_radios_put(httpd_req_t *req)
-{
-    char *body = read_body(req);
-
-    if (body == NULL || !sdcard_is_mounted())
-    {
-        free(body);
-        return send_ok(req, false, "Serve la scheda SD");
-    }
-
-    mkdir(SDCARD_MOUNT "/config", 0775);
-    FILE *file = fopen(SDCARD_MOUNT "/config/radios.txt", "w");
-
-    if (file != NULL)
-    {
-        fputs(body, file);
-        fclose(file);
-    }
-
-    free(body);
-    radio_reload();
-
-    return send_ok(req, file != NULL, NULL);
-}
-
 /* Raw .bin upload: POST /api/upload?name=MyApp -> /sdcard/apps/MyApp/MyApp.bin */
 static esp_err_t handle_upload(httpd_req_t *req)
 {
@@ -434,8 +392,6 @@ static esp_err_t start_httpd(void)
         {.uri = "/api/wifi", .method = HTTP_POST, .handler = handle_wifi_add},
         {.uri = "/api/alarms", .method = HTTP_GET, .handler = handle_alarms},
         {.uri = "/api/alarms", .method = HTTP_POST, .handler = handle_alarm_save},
-        {.uri = "/api/radios", .method = HTTP_GET, .handler = handle_radios_get},
-        {.uri = "/api/radios", .method = HTTP_POST, .handler = handle_radios_put},
         {.uri = "/api/upload", .method = HTTP_POST, .handler = handle_upload},
     };
 

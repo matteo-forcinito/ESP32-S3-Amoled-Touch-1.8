@@ -5,10 +5,9 @@
 #include "lvgl.h"
 
 /* ---- apps (each in its own file) */
-extern const app_t radio_app;
 extern const app_t alarms_app;
 extern const app_t alarm_edit_app;      /* hidden: arg = alarm id (0 = new) */
-extern const app_t ring_app;            /* hidden: arg = alarm_t * (copied) */
+extern const app_t ring_app;            /* hidden: arg = alarm_t * (malloc, freed by it) */
 extern const app_t weather_app;
 extern const app_t settings_app;
 extern const app_t settings_display_app;
@@ -23,6 +22,7 @@ extern const app_t extapps_run_app;     /* hidden: arg = extapp_t * (malloc, fre
 extern const app_t power_app;
 extern const app_t timer_app;
 extern const app_t music_app;
+extern const app_t usb_drive_app;
 extern const app_t call_app;
 
 /* ---- shell pieces (tiles of the home screen) */

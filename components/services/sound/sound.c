@@ -3,7 +3,6 @@
 #include "core/settings.h"
 #include "core/sys.h"
 #include "hardware/audio.h"
-#include "services/radio_player.h"
 
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -37,7 +36,7 @@ static int16_t *s_buffer = NULL;
 
 static bool speaker_free(void)
 {
-    return radio_player_state() == RADIO_STATE_IDLE || radio_player_state() == RADIO_STATE_FAILED;
+    return !audio_is_running();   /* nobody else (e.g. an app playing audio) holds the speaker */
 }
 
 /* Sine with a short fade in/out (no clicks), `level` 0..1. */
@@ -102,19 +101,28 @@ static void sound_task(void *arg)
 
     while (xQueueReceive(s_queue, &sound, portMAX_DELAY) == pdTRUE)
     {
-        /* The alarm MUST ring: give a stopping radio up to 10 s to free the speaker. */
-        for (int i = 0; sound == SOUND_ALARM && !speaker_free() && i < 100; i++)
+        if (sound != SOUND_ALARM && !speaker_free())
         {
-            vTaskDelay(pdMS_TO_TICKS(100));
+            continue;   /* someone else plays: skip clicks and chimes */
         }
 
-        if (sound == SOUND_ALARM && !s_alarm)
+        /*
+         * The alarm MUST ring: keep trying to open the speaker (another user
+         * may be closing it, the codec may not answer at once) until it works
+         * or the alarm is stopped.
+         */
+        esp_err_t err = audio_start(RATE, 1);
+
+        while (err != ESP_OK && sound == SOUND_ALARM && s_alarm)
         {
-            continue;   /* stopped while waiting */
+            ESP_LOGW(TAG, "Speaker busy or codec error (%s), retrying", esp_err_to_name(err));
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            err = audio_start(RATE, 1);
         }
 
-        if ((!speaker_free() && sound != SOUND_ALARM) || audio_start(RATE, 1) != ESP_OK)
+        if (err != ESP_OK || (sound == SOUND_ALARM && !s_alarm))
         {
+            audio_stop();
             continue;
         }
 
@@ -155,7 +163,7 @@ void sound_service_init(void)
     s_queue = xQueueCreate(4, sizeof(sound_t));
 
     if (s_buffer == NULL || s_queue == NULL ||
-        !sys_task_create(sound_task, "sound", 3072, NULL, 5, 1))
+        !sys_task_create(sound_task, "sound", 6144, NULL, 5, 1))
     {
         ESP_LOGE(TAG, "Init failed");
     }

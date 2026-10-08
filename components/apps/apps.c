@@ -13,13 +13,13 @@ void shell_create(void);
 
 /* Launcher order. Hidden apps (sub-pages) are registered too. */
 static const app_t *const s_apps[] = {
-    &radio_app,
     &alarms_app,
     &weather_app,
     &timer_app,
     &music_app,
     &flashlight_app,
     &web_app,
+    &usb_drive_app,
     &settings_app,
     /* hidden */
     &alarm_edit_app,
@@ -52,8 +52,11 @@ static void open_ring(void *arg)
         app_back();   /* a second alarm replaces the first */
     }
 
-    app_open_app(&ring_app, alarm);
-    free(alarm);
+    /* ring_app owns `alarm` from here (the open may be queued). */
+    if (!app_open_app(&ring_app, alarm))
+    {
+        free(alarm);
+    }
 }
 
 static void on_alarm(const alarm_t *alarm)

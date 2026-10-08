@@ -12,11 +12,17 @@ Human docs: README.md (Italian). Old Arduino code: `Launcher/`, `External APPS/`
 . C:\Espressif\tools\Microsoft.v6.1.PowerShell_profile.ps1
 idf.py build                      # -Werror on our code, keep it warning-free
 cd examples/hello_app; idf.py build
+cd external_apps/webradio; idf.py build   # the web radio is an EXTERNAL app
 ```
+
+Base system = small OS (alarms, notifications, BLE companion, settings, web page,
+USB drive, external app launcher). Heavy features go to external apps that reuse
+the components (EXTRA_COMPONENT_DIRS + EXCLUDE_COMPONENTS). `webradio` is excluded
+from the base build in the root CMakeLists.
 
 ## Layers (each uses only those below)
 
-apps (shell + apps) -> services -> ui -> core -> hardware. Board pins/flags only in
+apps (shell + apps) -> companion / webradio -> services -> ui -> core -> hardware. Board pins/flags only in
 `components/hardware/boards/*.h`; above hardware use `board_info()`.
 
 ## Rules that prevent bugs
@@ -25,15 +31,23 @@ apps (shell + apps) -> services -> ui -> core -> hardware. Board pins/flags only
   Never block in UI callbacks (network, radio_player_stop): spawn a task.
 - Services publish with `state_set/state_bump` (never lock LVGL). UI observes with
   `lv_subject_add_observer_obj(state_subject(X), cb, obj, user)` (auto-removed with obj).
+- esp_timer callbacks never do real work: `sys_post()` it to the sys worker
+  (NVS writes, esp_wifi_stop, alarm checks, BLE sends). Its stack is 4 KB.
+- Never lv_obj_delete() a screen: the app manager retires screens and deletes
+  them when LVGL no longer refers to them; app destroy() runs at that moment.
+  Args passed to app_open*() must stay valid (the open may be queued): pass
+  malloc'd data and free it in create().
 - Services read by the UI at creation must be initialized before `apps_init()`
   (see main.c / apps.c order); public getters should not assume init happened.
 - LVGL 9.6: `lv_obj_add_flag/remove_flag` are deprecated -> `lv_obj_set_clickable()` etc.;
   subjects via `lv_subject_create()`.
 - Per-instance UI state (widgets used in more than one place) must not be static:
   allocate and free on LV_EVENT_DELETE (see shell/now_playing.c).
-- THE ALARM MUST ALWAYS RING: ring_app falls back to the melody (radio not ready in 25 s,
-  failed, or 8 s silent). Keep it.
-- One speaker owner: radio_player vs sound service (sound waits for the radio to stop).
+- THE ALARM MUST ALWAYS RING: the sound service retries the speaker every second while
+  an alarm rings, ring_app restarts the melody if it stopped. Keep it.
+- UI code never calls blocking service functions (ble_companion_enable, radio_player_stop,
+  wifi_acquire): save the setting / post a command / start a task.
+- Crash? Boot log line `sys: PREVIOUS RUN CRASHED` + `idf.py coredump-info`.
 - Wi-Fi is reference counted: every `wifi_acquire()` needs a `wifi_release()`.
 - Power: hold `power_cpu_boost()` only while really computing; `power_keep_screen_on()` balanced.
 - Settings: append fields at the END of `settings_t` with a default in settings.c.

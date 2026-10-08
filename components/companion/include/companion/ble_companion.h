@@ -42,8 +42,14 @@ typedef struct
 
 esp_err_t ble_companion_init(void);
 
-/* Switch Bluetooth on/off (setting). */
+/*
+ * Switch Bluetooth on/off. Blocking (up to ~0.5 s): the UI does not call it,
+ * it just saves settings.ble_enabled and the companion follows by itself.
+ */
 void ble_companion_enable(bool enable);
+
+/* Restart with the current name/settings, in the background. */
+void ble_companion_restart(void);
 
 bool ble_companion_connected(void);
 

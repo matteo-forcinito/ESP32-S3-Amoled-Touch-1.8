@@ -16,12 +16,12 @@ idf_component_register(
     REQUIRES
         esp_driver_i2c
         esp_driver_gpio
+        sdmmc
     PRIV_REQUIRES
         esp_lcd
         esp_driver_spi
         esp_driver_i2s
         esp_driver_sdmmc
-        sdmmc
         fatfs
         esp_timer
         esp_pm

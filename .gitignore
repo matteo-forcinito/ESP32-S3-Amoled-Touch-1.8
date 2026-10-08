@@ -8,3 +8,8 @@ examples/*/sdkconfig
 examples/*/sdkconfig.old
 examples/*/managed_components/
 examples/*/dependencies.lock
+external_apps/*/build/
+external_apps/*/sdkconfig
+external_apps/*/sdkconfig.old
+external_apps/*/managed_components/
+external_apps/*/dependencies.lock

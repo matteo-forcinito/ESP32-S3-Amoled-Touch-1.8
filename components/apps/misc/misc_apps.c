@@ -3,7 +3,7 @@
 #include "core/power.h"
 #include "core/state.h"
 #include "hardware/display.h"
-#include "services/ble_companion.h"
+#include "companion/ble_companion.h"
 #include "services/notify.h"
 #include "ui/ui.h"
 

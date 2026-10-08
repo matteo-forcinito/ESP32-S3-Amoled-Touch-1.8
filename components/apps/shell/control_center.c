@@ -3,8 +3,7 @@
 #include "core/power.h"
 #include "core/settings.h"
 #include "core/state.h"
-#include "services/ble_companion.h"
-#include "services/radio.h"
+#include "companion/ble_companion.h"
 #include "services/wifi.h"
 #include "ui/ui.h"
 
@@ -12,7 +11,7 @@
  * Control center (swipe down from the watch face): quick toggles in round
  * buttons, brightness and volume sliders, power.
  *
- *    ( ᛒ )  ( ◐ )  ( ▶ )  ( ☀ )
+ *    ( ᛒ )  ( ◐ )  ( wifi )  ( torch )
  *    [ ☀ brightness ─────●── ]
  *    [ ♪ volume     ───●──── ]
  *    ( ⚙ settings )  ( ⏻ )
@@ -22,7 +21,7 @@ typedef struct
 {
     lv_obj_t *ble;
     lv_obj_t *aod;
-    lv_obj_t *radio;
+    lv_obj_t *wifi;
     lv_obj_t *battery;
 } cc_t;
 
@@ -57,7 +56,7 @@ static void refresh(lv_observer_t *observer, lv_subject_t *subject)
 
     paint(s_cc.ble, state_get(STATE_BLE) != STATE_BLE_OFF, UI_COLOR_BLUE);
     paint(s_cc.aod, settings_get()->always_on, UI_COLOR_INDIGO);
-    paint(s_cc.radio, radio_is_on(), UI_COLOR_PINK);
+    paint(s_cc.wifi, state_get(STATE_WIFI) == STATE_WIFI_CONNECTED, UI_COLOR_BLUE);
 
     int percent = state_get(STATE_BATTERY);
 
@@ -78,8 +77,7 @@ static void toggle_ble(lv_event_t *e)
 
     settings_t s = *settings_get();
     s.ble_enabled = !s.ble_enabled;
-    settings_save(&s);
-    ble_companion_enable(s.ble_enabled);
+    settings_save(&s);   /* the companion follows the setting */
 }
 
 static void toggle_aod(lv_event_t *e)
@@ -92,11 +90,7 @@ static void toggle_aod(lv_event_t *e)
     ui_toast(s.always_on ? "Always on attivo" : "Always on disattivato");
 }
 
-static void toggle_radio(lv_event_t *e)
-{
-    (void)e;
-    radio_toggle();
-}
+
 
 static void brightness_changed(lv_event_t *e)
 {
@@ -108,7 +102,9 @@ static void brightness_changed(lv_event_t *e)
 
 static void volume_changed(lv_event_t *e)
 {
-    radio_set_volume(lv_slider_get_value(lv_event_get_target_obj(e)));
+    settings_t s = *settings_get();
+    s.volume = (uint8_t)lv_slider_get_value(lv_event_get_target_obj(e));
+    settings_save(&s);
 }
 
 void control_center_create(lv_obj_t *parent)
@@ -129,7 +125,7 @@ void control_center_create(lv_obj_t *parent)
 
     s_cc.ble = round_toggle(row, LV_SYMBOL_BLUETOOTH, toggle_ble, NULL);
     s_cc.aod = round_toggle(row, LV_SYMBOL_EYE_OPEN, toggle_aod, NULL);
-    s_cc.radio = round_toggle(row, LV_SYMBOL_AUDIO, toggle_radio, NULL);
+    s_cc.wifi = round_toggle(row, LV_SYMBOL_WIFI, apps_open_cb, (void *)"settings.wifi");
     round_toggle(row, LV_SYMBOL_TINT, apps_open_cb, (void *)"flashlight");
 
     ui_slider_row(page, LV_SYMBOL_IMAGE, "Luminosità", 10, 255, settings_get()->brightness, brightness_changed, NULL);
@@ -140,7 +136,7 @@ void control_center_create(lv_obj_t *parent)
 
     lv_subject_add_observer_obj(state_subject(STATE_BLE), refresh, page, NULL);
     lv_subject_add_observer_obj(state_subject(STATE_SETTINGS_VERSION), refresh, page, NULL);
-    lv_subject_add_observer_obj(state_subject(STATE_RADIO), refresh, page, NULL);
+    lv_subject_add_observer_obj(state_subject(STATE_WIFI), refresh, page, NULL);
     lv_subject_add_observer_obj(state_subject(STATE_BATTERY), refresh, page, NULL);
     lv_subject_add_observer_obj(state_subject(STATE_CHARGING), refresh, page, NULL);
 }

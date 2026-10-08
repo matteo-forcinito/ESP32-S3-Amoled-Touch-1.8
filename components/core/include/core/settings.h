@@ -67,4 +67,11 @@ void settings_flush(void);
 
 void settings_reset(void);
 
+/*
+ * Called after every settings_save(), in the caller's task: keep it short
+ * (compare and sys_post() the real work). Up to 6 listeners.
+ */
+typedef void (*settings_listener_t)(const settings_t *settings);
+void settings_add_listener(settings_listener_t listener);
+
 #endif
