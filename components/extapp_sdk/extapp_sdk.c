@@ -26,7 +26,7 @@ esp_err_t extapp_sdk_init(void)
 void extapp_return_to_launcher(void)
 {
     extapp_sdk_init();
-    esp_MatteCiao a tuorestart();
+    esp_restart();
 }
 
 void extapp_restart_self(void)
