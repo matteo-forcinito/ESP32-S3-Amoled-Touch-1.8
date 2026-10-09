@@ -92,7 +92,7 @@ La GitHub Action (`.github/workflows/release.yml`):
 
 1. prende la versione dal nome del branch (`release/X.Y.Z` o `release/X.Y.Z-dev.N`, altrimenti si ferma) e compila
    con ESP-IDF 6.1, verificando che la versione nell'immagine sia quella;
-2. pubblica la release `amoled-vX.Y.Z` nel repo pubblico con `amoled_watch.bin`, lo zip per il
+2. pubblica la release `amoled-vX.Y.Z` nel repo pubblico con `firmware.bin` (stesso nome per tutti i dispositivi), lo zip per il
    flash via USB e `SHA256SUMS.txt`;
 3. la aggiunge al catalogo `amoled.json` nel repo pubblico: da quel momento gli orologi la vedono;
 4. mette il tag `amoled-vX.Y.Z` sul commit di questo repo.

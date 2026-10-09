@@ -18,6 +18,8 @@ firmware (`../SenseCap-Watcher-W1-A`). This repo keeps only `components/hardware
   Edit the library in the sibling checkout ../watch-os-common and build with
   `$env:WATCH_OS_COMMON_DIR="C:/Users/matte/Documents/ESP-IDF/watch-os-common"`; then commit+push it
   and run `git submodule update --remote watch-os-common` here (commit the new pointer).
+- Every build also writes build/firmware.bin (same name on all devices; release asset too). The
+  project name stays the image identity checked by the updater: never rename it.
 - Releases: push a branch release/X.Y.Z (stable) or release/X.Y.Z-dev.N (dev); see docs/RELEASE.md.
 - Board-specific behaviour goes behind board_api (e.g. display_round_area()) or board_info() flags
   (round, has_knob, has_usb_otg, product/short_name for names shown to users).
