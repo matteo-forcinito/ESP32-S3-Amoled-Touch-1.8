@@ -30,6 +30,7 @@ static bool s_started = false;
 static bool s_touched = false;   /* the card was taken from the file system */
 static lv_timer_t *s_timer = NULL;
 static esp_pm_lock_handle_t s_pm_lock = NULL;
+static esp_pm_lock_handle_t s_cpu_lock = NULL;
 static tinyusb_msc_storage_handle_t s_storage = NULL;
 
 /* TinyUSB task: only a flag here, the screen is updated by the timer. */
@@ -129,15 +130,29 @@ static void create(lv_obj_t *screen, void *arg)
     lv_obj_set_style_text_align(s_status, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(s_status, lv_color_hex(UI_COLOR_TEXT_DIM), 0);
 
-    /* The USB stack must keep running: no light sleep while the drive is on. */
+    /*
+     * The USB stack must keep running: no light sleep while the drive is on,
+     * and full CPU speed so the PC is never kept waiting (a slow drive hangs
+     * Windows Explorer). The cable powers the watch meanwhile.
+     */
     if (s_pm_lock == NULL)
     {
         esp_pm_lock_create(ESP_PM_NO_LIGHT_SLEEP, 0, "usb_drive", &s_pm_lock);
     }
 
+    if (s_cpu_lock == NULL)
+    {
+        esp_pm_lock_create(ESP_PM_CPU_FREQ_MAX, 0, "usb_drive_cpu", &s_cpu_lock);
+    }
+
     if (s_pm_lock != NULL)
     {
         esp_pm_lock_acquire(s_pm_lock);
+    }
+
+    if (s_cpu_lock != NULL)
+    {
+        esp_pm_lock_acquire(s_cpu_lock);
     }
 
     s_touched = true;
@@ -178,6 +193,11 @@ static void destroy(void)
     if (s_pm_lock != NULL && !s_started)
     {
         esp_pm_lock_release(s_pm_lock);
+    }
+
+    if (s_cpu_lock != NULL && !s_started)
+    {
+        esp_pm_lock_release(s_cpu_lock);
     }
 }
 

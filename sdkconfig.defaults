@@ -77,6 +77,9 @@ CONFIG_LWIP_TCP_RECVMBOX_SIZE=16
 
 # ---- USB drive app (TinyUSB mass storage) ---------------------------------
 CONFIG_TINYUSB_MSC_ENABLED=y
+# 8 sectors per SD access instead of 1: with 512 B the drive is so slow that
+# Windows Explorer and the taskbar hang while the PC scans it.
+CONFIG_TINYUSB_MSC_BUFSIZE=4096
 CONFIG_TINYUSB_DESC_PRODUCT_STRING="AMOLED Watch"
 CONFIG_TINYUSB_DESC_MSC_STRING="AMOLED Watch SD"
 
