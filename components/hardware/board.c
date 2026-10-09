@@ -17,14 +17,18 @@ static const char *TAG = "board";
 
 static const board_info_t s_info = {
     .name = BOARD_NAME,
+    .product = "AMOLED Watch",
+    .short_name = "AMOLED",
     .width = BOARD_LCD_WIDTH,
     .height = BOARD_LCD_HEIGHT,
     .round = BOARD_LCD_ROUND,
     .has_touch = BOARD_HAS_TOUCH,
+    .has_knob = false,
     .has_pmu = BOARD_HAS_PMU,
     .has_rtc = BOARD_HAS_RTC,
     .has_audio = BOARD_HAS_AUDIO,
     .has_sdcard = BOARD_HAS_SDCARD,
+    .has_usb_otg = true,
 };
 
 #if BOARD_HAS_IO_EXPANDER

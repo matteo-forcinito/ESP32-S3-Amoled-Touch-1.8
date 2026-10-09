@@ -10,11 +10,13 @@ idf_component_register(
         "sdcard.c"
         "button.c"
         "usb_console.c"
+        "knob.c"
     INCLUDE_DIRS
         "include"
     PRIV_INCLUDE_DIRS
         "boards"
     REQUIRES
+        board_api
         esp_driver_i2c
         esp_driver_gpio
         sdmmc

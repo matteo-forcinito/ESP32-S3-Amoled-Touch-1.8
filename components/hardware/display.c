@@ -135,6 +135,15 @@ esp_err_t display_draw(int x1, int y1, int x2, int y2, const void *pixels)
     return esp_lcd_panel_draw_bitmap(s_panel, x1, y1, x2 + 1, y2 + 1, pixels);
 }
 
+/* The SH8601 only accepts windows starting on even and ending on odd pixels. */
+void display_round_area(int *x1, int *y1, int *x2, int *y2)
+{
+    *x1 &= ~1;
+    *y1 &= ~1;
+    *x2 |= 1;
+    *y2 |= 1;
+}
+
 esp_err_t display_set_brightness(uint8_t level)
 {
     return send_command(CMD_BRIGHTNESS, &level, 1);

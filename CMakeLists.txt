@@ -2,6 +2,11 @@
 # (and, through the board layer in components/hardware, its sister boards).
 cmake_minimum_required(VERSION 3.16)
 
+# Shared watch OS (core, ui, services, apps...): a sibling folder for now,
+# a git submodule later. This project only adds its own hardware layer.
+set(WATCH_OS_COMMON "${CMAKE_CURRENT_LIST_DIR}/../watch-os-common")
+set(EXTRA_COMPONENT_DIRS "${WATCH_OS_COMMON}/components")
+
 # The web radio engine is used by the external WebRadio app, not by the base system.
 set(EXCLUDE_COMPONENTS "webradio" "hid_link")
 
