@@ -65,7 +65,7 @@ jobs:
         run: |
           git config --global --add safe.directory '*'
           auth="url.https://x-access-token:${REPOS_TOKEN}@github.com/.insteadOf=https://github.com/"
-          git -c "$auth" submodule update --init --recursive
+          git -c "$auth" submodule update --init watch-os-common   # only this one: other gitlinks may have no URL
 
       - name: Build
         shell: bash
