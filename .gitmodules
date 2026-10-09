@@ -1,0 +1,4 @@
+[submodule "watch-os-common"]
+	path = watch-os-common
+	url = https://github.com/matteo-forcinito/watch-os-common.git
+	branch = main

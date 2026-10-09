@@ -5,7 +5,10 @@ cmake_minimum_required(VERSION 3.16)
 # Shared watch OS (core, ui, services, apps...): the git submodule
 # ./watch-os-common, or (before the submodule is set up) the sibling folder.
 # This project only adds its own hardware layer.
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/watch-os-common/components")
+if(DEFINED ENV{WATCH_OS_COMMON_DIR})
+    # Working on the library itself: build against your checkout of it.
+    set(WATCH_OS_COMMON "$ENV{WATCH_OS_COMMON_DIR}")
+elseif(EXISTS "${CMAKE_CURRENT_LIST_DIR}/watch-os-common/components")
     set(WATCH_OS_COMMON "${CMAKE_CURRENT_LIST_DIR}/watch-os-common")
 else()
     set(WATCH_OS_COMMON "${CMAKE_CURRENT_LIST_DIR}/../watch-os-common")

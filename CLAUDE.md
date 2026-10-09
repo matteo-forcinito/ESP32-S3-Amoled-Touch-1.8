@@ -6,14 +6,19 @@ ESP-IDF 6.1, C, LVGL 9.6. Code/comments in English, Allman braces, 4 spaces,
 snake_case, `s_` statics, `TAG` per file, beginner-friendly header comments.
 Human docs: README.md (Italian). Old Arduino code: `Launcher/`, `External APPS/` (reference only).
 
-## Shared OS (../watch-os-common)
+## Shared OS (watch-os-common submodule)
 
 core, ui, services, apps, companion, extapp_sdk, webradio, hid_link and board_api live in
-`../watch-os-common/components` (EXTRA_COMPONENT_DIRS), shared with the SenseCAP Watcher
+`watch-os-common/components` (EXTRA_COMPONENT_DIRS), shared with the SenseCAP Watcher
 firmware (`../SenseCap-Watcher-W1-A`). This repo keeps only `components/hardware` + main/apps.
 - `board_api` = the hardware headers (display.h, touch.h, pmu.h, knob.h...). Each firmware's
   `hardware` component implements them; shared code never sees pins or chip names.
 - A change in watch-os-common must build in BOTH firmwares (round 412x412 + knob vs 368x448).
+- watch-os-common is a git submodule (./watch-os-common, repo matteo-forcinito/watch-os-common).
+  Edit the library in the sibling checkout ../watch-os-common and build with
+  `$env:WATCH_OS_COMMON_DIR="C:/Users/matte/Documents/ESP-IDF/watch-os-common"`; then commit+push it
+  and run `git submodule update --remote watch-os-common` here (commit the new pointer).
+- Releases: push a branch release/X.Y.Z (stable) or release/X.Y.Z-dev.N (dev); see docs/RELEASE.md.
 - Board-specific behaviour goes behind board_api (e.g. display_round_area()) or board_info() flags
   (round, has_knob, has_usb_otg, product/short_name for names shown to users).
 - Round panels: use ui_page()/ui_title()/ui_text() (they centre on round boards); never left-align
