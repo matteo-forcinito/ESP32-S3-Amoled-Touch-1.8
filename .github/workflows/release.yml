@@ -1,6 +1,8 @@
 # Release: push a branch named release/X.Y.Z (stable channel) or
 # release/X.Y.Z-dev.N (dev channel: test builds) and this workflow
-#   1. builds the firmware with version X.Y.Z (FW_VERSION -> PROJECT_VER)
+#   1. builds the firmware with version X.Y.Z (FW_VERSION -> PROJECT_VER), with
+#      ESP-IDF v6.1 installed on the runner and cached (no Docker Hub pulls:
+#      their anonymous rate limit made releases fail)
 #   2. publishes it as release "amoled-vX.Y.Z" in the PUBLIC binaries-only repo
 #   3. adds it to amoled.json there (tools/update_catalog.py): the catalog of every
 #      release and the newest of each channel, read by the watches
@@ -38,7 +40,6 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
-    container: espressif/idf:v6.1
 
     steps:
       - name: Version from the branch name
@@ -67,12 +68,29 @@ jobs:
           auth="url.https://x-access-token:${REPOS_TOKEN}@github.com/.insteadOf=https://github.com/"
           git -c "$auth" submodule update --init watch-os-common   # only this one: other gitlinks may have no URL
 
+      - name: ESP-IDF v6.1 (cached between runs)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/esp-idf
+            ~/.espressif
+          key: esp-idf-v6.1-esp32s3-${{ runner.os }}
+
+      - name: Install ESP-IDF if not cached
+        shell: bash
+        run: |
+          if [ ! -f "$HOME/esp-idf/export.sh" ]; then
+            git clone --depth 1 --branch v6.1 --recursive --shallow-submodules \
+              https://github.com/espressif/esp-idf.git "$HOME/esp-idf"
+          fi
+          "$HOME/esp-idf/install.sh" esp32s3
+
       - name: Build
         shell: bash
         env:
           FW_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          . "$IDF_PATH/export.sh"
+          . "$HOME/esp-idf/export.sh"
           rm -f sdkconfig                      # always from sdkconfig.defaults
           idf.py set-target esp32s3
           idf.py build
@@ -95,7 +113,7 @@ jobs:
           cp build/bootloader/bootloader.bin dist/usb-flash/bootloader/
           cp build/partition_table/partition-table.bin dist/usb-flash/partition_table/
           cp build/ota_data_initial.bin "build/$APP_BIN" build/flash_args dist/usb-flash/
-          python -c "import shutil; shutil.make_archive('dist/${PRODUCT}-usb-flash-${{ steps.version.outputs.version }}', 'zip', 'dist', 'usb-flash')"
+          python3 -c "import shutil; shutil.make_archive('dist/${PRODUCT}-usb-flash-${{ steps.version.outputs.version }}', 'zip', 'dist', 'usb-flash')"
           sha256sum "dist/$APP_BIN" | tee dist/SHA256SUMS.txt
 
       - name: Publish the release (public repo)
@@ -128,7 +146,7 @@ jobs:
         run: |
           notes="$(git log -1 --format=%s)"
           git clone --depth 1 "https://x-access-token:${RELEASES_TOKEN}@github.com/${RELEASES_REPO}.git" public
-          python tools/update_catalog.py "public/${PRODUCT}.json" \
+          python3 tools/update_catalog.py "public/${PRODUCT}.json" \
             --version "$VERSION" \
             --url "https://github.com/${RELEASES_REPO}/releases/download/${TAG}/${APP_BIN}" \
             --size "$(stat -c %s "dist/$APP_BIN")" \
