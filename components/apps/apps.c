@@ -4,6 +4,8 @@
 
 #include "core/lv_port.h"
 #include "core/power.h"
+#include "core/state.h"
+#include "services/fw_update.h"
 #include "services/alarm.h"
 
 #include <stdlib.h>
@@ -33,6 +35,7 @@ static const app_t *const s_apps[] = {
     &settings_about_app,
     &power_app,
     &call_app,
+    &update_app,
 };
 
 void apps_open_cb(lv_event_t *e)
@@ -77,6 +80,18 @@ static void on_alarm(const alarm_t *alarm)
     }
 }
 
+/* An update started from the web page: show its progress on the watch. */
+static void on_update_phase(lv_observer_t *observer, lv_subject_t *subject)
+{
+    (void)observer;
+
+    if (lv_subject_get_int(subject) == FW_UPDATE_WRITING && app_current() != &update_app)
+    {
+        power_wake(POWER_WAKE_OTHER);
+        app_open_app(&update_app, NULL);
+    }
+}
+
 void apps_init(void)
 {
     for (size_t i = 0; i < sizeof(s_apps) / sizeof(s_apps[0]); i++)
@@ -87,4 +102,6 @@ void apps_init(void)
     /* Before the shell: the watch face asks for the next alarm as soon as it exists. */
     alarm_service_init(on_alarm);
     shell_create();
+
+    lv_subject_add_observer(state_subject(STATE_UPDATE), on_update_phase, NULL);
 }

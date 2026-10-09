@@ -67,6 +67,7 @@ static void sanitize(settings_t *s)
     s->timezone[sizeof(s->timezone) - 1] = '\0';
     s->device_name[sizeof(s->device_name) - 1] = '\0';
     s->weather_city[sizeof(s->weather_city) - 1] = '\0';
+    s->update_url[sizeof(s->update_url) - 1] = '\0';
 
     if (s->timezone[0] == '\0')
     {

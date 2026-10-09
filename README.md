@@ -36,8 +36,10 @@ ESP-IDF 6.1. I componenti esterni (LVGL 9.6, driver SH8601, esp_codec_dev, TinyU
 cJSON, mDNS) vengono scaricati al primo build. Dopo aver cambiato `sdkconfig.defaults`
 cancella `sdkconfig` (o `idf.py fullclean`) perché le nuove impostazioni vengano applicate.
 
-> Con il cavo USB collegato a un PC il chip non entra in light sleep (la console resta
-> attiva): per misurare i consumi alimentalo da batteria.
+> Con il cavo USB collegato (PC o caricatore) il chip non entra in light sleep: la porta
+> risponde sempre per flash e monitor, anche se l'orologio dormiva da ore. Se il PC aveva
+> rinunciato alla porta mentre l'orologio dormiva, l'orologio la "ricollega" da solo.
+> Per misurare i consumi alimentalo da batteria.
 
 ### App esterna Web Radio
 
@@ -62,7 +64,8 @@ per i preferiti.
 
 ### App esterna Remote Control
 
-Stessa procedura (`cd external_appsemote`, `idf.py set-target esp32s3`, `idf.py build`),
+Stessa procedura (`cd external_apps
+emote`, `idf.py set-target esp32s3`, `idf.py build`),
 file in `/sdcard/apps/Remote/` (`Remote.bin` <- `build/remote.bin`, `icon.png`, `manifest.json`).
 
 - **Collegamento**: *Via* sceglie Bluetooth o USB (l'app si riavvia). Bluetooth: dal PC o
@@ -158,6 +161,27 @@ che non servono: hanno lo stesso aspetto e la stessa gestione energetica del sis
 | Wi-Fi | a riferimento contato, si spegne 8 s dopo l'ultimo uso; modem sleep |
 | BLE | advertising veloce 60 s dopo avvio/disconnessione, poi ogni 1-1,5 s; connessione con slave latency |
 | Audio | codec e amplificatore spenti quando non suona nulla |
+
+## Aggiornamento firmware
+
+Impostazioni → **Aggiornamento** mostra versione e slot. Due modi, senza cavo:
+
+- **Dal PC**: pagina web → *Aggiornamento firmware* → scegli `build/amoled_watch.bin` →
+  *Installa*. La pagina mostra percentuale e velocità; l'orologio apre da solo la schermata
+  di aggiornamento con la sua barra (aggiornata solo a ogni punto percentuale, così non
+  rallenta il trasferimento). Durante l'invio il Wi-Fi esce dal risparmio energetico.
+- **Online**: nella pagina web imposta l'indirizzo di un file JSON, ad esempio
+  `{"version": "1.2.0", "url": "https://.../amoled_watch.bin"}`; sull'orologio
+  *Controlla aggiornamenti* → *Installa*.
+
+Sicurezza: prima di toccare la flash viene controllato che il file sia il firmware di
+sistema per questo chip (un'app esterna o un `.bin` "merged" vengono rifiutati); a fine
+copia si verifica lo SHA-256; dopo il riavvio la nuova versione deve completare l'avvio e
+restare accesa 5 s, altrimenti il bootloader torna alla precedente (*rollback*).
+Il nuovo firmware va nell'altro slot: le app esterne useranno quello vecchio (andranno
+reinstallate dalla SD al primo avvio, automaticamente). La versione è `PROJECT_VER` nel
+`CMakeLists.txt` principale. Il rollback richiede il nuovo bootloader: **una volta** serve
+`idf.py flash` via USB.
 
 ## Pagina web: file della microSD
 

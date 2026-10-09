@@ -52,6 +52,9 @@ typedef struct
     /* look */
     uint8_t watchface;           /* 0 = digital, 1 = analog, 2 = minimal */
     uint32_t accent_color;       /* 0xRRGGBB */
+
+    /* firmware update: JSON manifest {"version": "1.2.0", "url": "https://.../amoled_watch.bin"} */
+    char update_url[160];
 } settings_t;
 
 esp_err_t settings_init(void);

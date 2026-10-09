@@ -213,7 +213,7 @@ static long find_app_offset(FILE *file, long size)
     return 0;
 }
 
-static void forget_cache(void)
+void extapp_forget_cache(void)
 {
     nvs_handle_t nvs;
 
@@ -293,7 +293,7 @@ esp_err_t extapp_launch(const extapp_t *app, void (*progress)(int percent, void 
     }
 
     /* The slot is about to change: the old "already installed" note is wrong from now on. */
-    forget_cache();
+    extapp_forget_cache();
 
     /* Sequential writes: each sector is erased just before it is written, so the
        progress bar moves from the start instead of waiting for a long erase. */

@@ -6,4 +6,7 @@ cmake_minimum_required(VERSION 3.16)
 set(EXCLUDE_COMPONENTS "webradio" "hid_link")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+# Shown in Settings > Update; the online check compares it with the manifest.
+set(PROJECT_VER "1.1.0")
+
 project(amoled_watch)

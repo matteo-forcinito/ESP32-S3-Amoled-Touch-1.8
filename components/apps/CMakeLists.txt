@@ -17,6 +17,7 @@ idf_component_register(
         "extapps/extapps_app.c"
         "timer/timer_app.c"
         "usb/usb_drive_app.c"
+        "update/update_app.c"
     INCLUDE_DIRS
         "include"
     PRIV_INCLUDE_DIRS
@@ -31,5 +32,6 @@ idf_component_register(
         esp_pm
         esp_tinyusb
         esp_timer
+        app_update
         esp_app_format
 )

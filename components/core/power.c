@@ -7,6 +7,7 @@
 #include "hardware/display.h"
 #include "hardware/pmu.h"
 #include "hardware/touch.h"
+#include "hardware/usb_console.h"
 
 #include "esp_log.h"
 #include "esp_pm.h"
@@ -55,6 +56,8 @@ static power_screen_t s_screen = POWER_SCREEN_ON;
 static uint8_t s_brightness_now = 0;
 static void (*s_button_handler)(button_id_t, button_event_t) = NULL;
 static esp_pm_lock_handle_t s_cpu_lock = NULL;
+static esp_pm_lock_handle_t s_usb_lock = NULL;   /* no light sleep while the cable has power */
+static bool s_usb_power = false;
 static _Atomic int s_cpu_boost = 0;
 
 /* ------------------------------------------------------------ helpers */
@@ -245,6 +248,43 @@ static void poll_battery(void)
     }
 }
 
+/*
+ * Cable plugged in / out, checked with every PWR key poll (one PMU register,
+ * the chip is awake for the key anyway). With power on the cable the chip
+ * stays out of light sleep, so the USB port always answers the PC (flashing,
+ * monitor); if the PC gave up on it while we slept, it is re-announced.
+ */
+static void check_usb_power(void)
+{
+    if (!pmu_present())
+    {
+        return;
+    }
+
+    bool usb = pmu_usb_present();
+
+    if (usb == s_usb_power)
+    {
+        return;
+    }
+
+    s_usb_power = usb;
+
+    if (usb)
+    {
+        esp_pm_lock_acquire(s_usb_lock);
+        poll_battery();
+        usb_console_reconnect();
+    }
+    else
+    {
+        esp_pm_lock_release(s_usb_lock);
+        poll_battery();
+    }
+
+    ESP_LOGI(TAG, "USB power %s", usb ? "on: light sleep paused" : "off");
+}
+
 /* -------------------------------------------------------------- task */
 
 static void power_task(void *arg)
@@ -286,6 +326,7 @@ static void power_task(void *arg)
         if (now >= next_key_poll)
         {
             button_poll_pmu();
+            check_usb_power();
             next_key_poll = now + (int64_t)(s_screen == POWER_SCREEN_ON ? KEY_POLL_ON_MS : KEY_POLL_OFF_MS) * 1000;
         }
 
@@ -361,6 +402,7 @@ esp_err_t power_init(void)
     }
 
     esp_pm_lock_create(ESP_PM_CPU_FREQ_MAX, 0, "boost", &s_cpu_lock);
+    esp_pm_lock_create(ESP_PM_NO_LIGHT_SLEEP, 0, "usb_power", &s_usb_lock);
 
     s_queue = xQueueCreate(8, sizeof(msg_t));
 

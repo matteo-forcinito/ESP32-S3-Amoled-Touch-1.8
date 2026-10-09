@@ -46,6 +46,9 @@ bool extapp_is_cached(const extapp_t *app);
  */
 esp_err_t extapp_launch(const extapp_t *app, void (*progress)(int percent, void *ctx), void *ctx);
 
+/* The app slot is being overwritten (e.g. firmware update): no app is cached any more. */
+void extapp_forget_cache(void);
+
 /* Error text of the last failed launch. */
 const char *extapp_last_error(void);
 

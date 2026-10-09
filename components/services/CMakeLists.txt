@@ -12,6 +12,7 @@ idf_component_register(
         "web/web_server.c"
         "web/web_files.c"
         "apps/extapp.c"
+        "update/fw_update.c"
     INCLUDE_DIRS
         "include"
     REQUIRES

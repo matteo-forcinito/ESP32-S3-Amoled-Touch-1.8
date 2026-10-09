@@ -37,6 +37,7 @@ static esp_netif_t *s_sta = NULL;
 static esp_netif_t *s_ap = NULL;
 static esp_timer_handle_t s_off_timer = NULL;
 static bool s_started = false;
+static int s_fast_refs = 0;   /* wifi_set_fast() holders */
 static bool s_sta_wanted = false;
 static bool s_ap_on = false;
 static int s_retries = 0;
@@ -257,7 +258,7 @@ static void radio_on(wifi_mode_t mode)
         esp_wifi_start();
         s_started = true;
         /* Modem sleep between beacons: big saving, still fine for streaming. */
-        esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+        esp_wifi_set_ps(s_fast_refs > 0 ? WIFI_PS_NONE : WIFI_PS_MIN_MODEM);
     }
     else
     {
@@ -463,6 +464,21 @@ void wifi_release(void)
     {
         esp_timer_stop(s_off_timer);
         esp_timer_start_once(s_off_timer, OFF_DELAY_US);
+    }
+
+    xSemaphoreGive(s_mutex);
+}
+
+void wifi_set_fast(bool fast)
+{
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+
+    int before = s_fast_refs;
+    s_fast_refs += fast ? 1 : (s_fast_refs > 0 ? -1 : 0);
+
+    if (s_started && (before == 0) != (s_fast_refs == 0))
+    {
+        esp_wifi_set_ps(s_fast_refs > 0 ? WIFI_PS_NONE : WIFI_PS_MIN_MODEM);
     }
 
     xSemaphoreGive(s_mutex);

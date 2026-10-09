@@ -24,6 +24,7 @@ extern const app_t timer_app;
 extern const app_t music_app;
 extern const app_t usb_drive_app;
 extern const app_t call_app;
+extern const app_t update_app;          /* hidden: Settings > Aggiornamento */
 
 /* ---- shell pieces (tiles of the home screen) */
 void watchface_create(lv_obj_t *parent);

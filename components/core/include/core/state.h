@@ -39,6 +39,8 @@ typedef enum
     STATE_ALARM_VERSION,
     STATE_SETTINGS_VERSION,
     STATE_MUSIC_VERSION,    /* phone music info (from the companion) */
+    STATE_UPDATE,           /* fw_update_phase_t (services/fw_update.h) */
+    STATE_UPDATE_PERCENT,   /* 0..100 while writing a firmware */
     STATE_COUNT
 } state_id_t;
 

@@ -54,6 +54,7 @@ static void main_create(lv_obj_t *screen, void *arg)
     ui_row(page, LV_SYMBOL_WIFI, UI_COLOR_BLUE, "Wi-Fi", NULL, apps_open_cb, (void *)"settings.wifi");
     ui_row(page, LV_SYMBOL_BLUETOOTH, UI_COLOR_INDIGO, "Bluetooth", NULL, apps_open_cb, (void *)"settings.bluetooth");
     ui_row(page, LV_SYMBOL_LOOP, UI_COLOR_ORANGE, "Ora e data", NULL, apps_open_cb, (void *)"settings.time");
+    ui_row(page, LV_SYMBOL_DOWNLOAD, UI_COLOR_GREEN, "Aggiornamento", NULL, apps_open_cb, (void *)"settings.update");
     ui_row(page, LV_SYMBOL_DRIVE, UI_COLOR_GRAY, "Info", NULL, apps_open_cb, (void *)"settings.about");
     ui_row(page, LV_SYMBOL_POWER, UI_COLOR_RED, "Alimentazione", NULL, apps_open_cb, (void *)"system.power");
 }

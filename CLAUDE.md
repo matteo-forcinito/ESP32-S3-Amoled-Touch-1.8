@@ -62,4 +62,9 @@ apps (shell + apps) -> companion / webradio / hid_link -> services -> ui -> core
 - Remote Control: swipe decoder `external_apps/remote/main/swipe.c` is pure C (host-testable);
   its layout must match the key geometry drawn in keyboard_app.c. Changing BLE<->USB
   restarts the app (`extapp_restart_self()`): HID stacks are never torn down at runtime.
+- Firmware update: services/update/fw_update.c (web POST /api/firmware, online manifest
+  settings.update_url). Rollback is on: main.c calls fw_update_confirm_boot() at the END
+  of the boot - keep it last. Bump PROJECT_VER in the root CMakeLists for releases.
+- USB cable power (PMU VBUS, polled with the PWR key) holds a no-light-sleep lock in
+  power.c and re-announces the USB console (hardware/usb_console.c): keep it.
 - New .c files go into the component's CMakeLists SRCS; new apps into apps.c `s_apps[]`.

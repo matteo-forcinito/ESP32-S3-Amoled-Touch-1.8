@@ -6,6 +6,7 @@
 #include "hardware/pmu.h"
 #include "hardware/sdcard.h"
 #include "services/alarm.h"
+#include "services/fw_update.h"
 #include "services/wifi.h"
 
 #include "web_files.h"
@@ -143,6 +144,7 @@ static esp_err_t handle_state(httpd_req_t *req)
     cJSON_AddStringToObject(json, "wifi", text);
     cJSON_AddNumberToObject(json, "time", (double)time(NULL));
     cJSON_AddBoolToObject(json, "sd", sdcard_is_mounted());
+    cJSON_AddStringToObject(json, "version", fw_update_running_version());
 
     cJSON *set = cJSON_AddObjectToObject(json, "settings");
     cJSON_AddNumberToObject(set, "brightness", s->brightness);
@@ -158,6 +160,7 @@ static esp_err_t handle_state(httpd_req_t *req)
     cJSON_AddStringToObject(set, "device_name", s->device_name);
     cJSON_AddStringToObject(set, "weather_city", s->weather_city);
     cJSON_AddNumberToObject(set, "watchface", s->watchface);
+    cJSON_AddStringToObject(set, "update_url", s->update_url);
 
     return send_json(req, json);
 }
@@ -185,6 +188,7 @@ static esp_err_t handle_settings(httpd_req_t *req)
     s.watchface = (uint8_t)get_int(json, "watchface", s.watchface);
     get_string(json, "timezone", s.timezone, sizeof(s.timezone));
     get_string(json, "device_name", s.device_name, sizeof(s.device_name));
+    get_string(json, "update_url", s.update_url, sizeof(s.update_url));
     cJSON_Delete(json);
 
     settings_save(&s);
@@ -368,6 +372,58 @@ static esp_err_t handle_upload(httpd_req_t *req)
     return send_ok(req, ok, ok ? "App caricata" : "Upload interrotto");
 }
 
+/*
+ * Firmware update: POST /api/firmware with the raw build/amoled_watch.bin.
+ * Streamed straight into the other app slot (8 KB at a time, no copy on the
+ * SD card); the watch shows the progress and restarts when it is verified.
+ */
+static esp_err_t handle_firmware(httpd_req_t *req)
+{
+    if (fw_update_begin(req->content_len) != ESP_OK)
+    {
+        const char *why = fw_update_message();
+        return send_ok(req, false, why[0] != '\0' ? why : "Aggiornamento già in corso");
+    }
+
+    char *buffer = malloc(8192);
+    size_t left = req->content_len;
+    esp_err_t err = buffer != NULL ? ESP_OK : ESP_ERR_NO_MEM;
+
+    if (buffer == NULL)
+    {
+        fw_update_abort("Memoria insufficiente");
+    }
+
+    while (err == ESP_OK && left > 0)
+    {
+        int n = httpd_req_recv(req, buffer, left < 8192 ? left : 8192);
+
+        if (n == HTTPD_SOCK_ERR_TIMEOUT)
+        {
+            continue;
+        }
+
+        if (n <= 0)
+        {
+            fw_update_abort("Upload interrotto");
+            err = ESP_FAIL;
+            break;
+        }
+
+        err = fw_update_write(buffer, (size_t)n);   /* aborts by itself on error */
+        left -= (size_t)n;
+    }
+
+    free(buffer);
+
+    if (err == ESP_OK)
+    {
+        err = fw_update_end();
+    }
+
+    return send_ok(req, err == ESP_OK, err == ESP_OK ? "Firmware installato: riavvio in corso" : fw_update_message());
+}
+
 /* ------------------------------------------------------------- server */
 
 static esp_err_t start_httpd(void)
@@ -395,6 +451,7 @@ static esp_err_t start_httpd(void)
         {.uri = "/api/alarms", .method = HTTP_GET, .handler = handle_alarms},
         {.uri = "/api/alarms", .method = HTTP_POST, .handler = handle_alarm_save},
         {.uri = "/api/upload", .method = HTTP_POST, .handler = handle_upload},
+        {.uri = "/api/firmware", .method = HTTP_POST, .handler = handle_firmware},
     };
 
     for (size_t i = 0; i < sizeof(routes) / sizeof(routes[0]); i++)

@@ -84,6 +84,16 @@ button.ghost{background:var(--hi)}button.red{background:var(--red)}.status{color
  <div class="row"><label>Nome</label><input type="text" id="u_name" placeholder="MiaApp"></div>
  <div class="row"><input type="file" id="u_file" accept=".bin"><button onclick="upload()">Carica .bin</button></div>
 </div>
+
+<h2>Aggiornamento firmware</h2>
+<div class="card">
+ <div class="row"><label>Versione installata</label><b id="fw_ver">-</b></div>
+ <div class="row"><input type="file" id="fw_file" accept=".bin"><button onclick="fwUpload()">Installa</button></div>
+ <div class="bar" id="fw_bar" hidden><div id="fw_bar_fill"></div></div>
+ <div class="status" id="fw_info">Scegli <b>build/amoled_watch.bin</b>: l'orologio lo verifica, si riavvia e torna da solo alla versione precedente se quella nuova non parte.</div>
+ <div class="row"><label>Manifest online (JSON)</label><input type="text" id="update_url" placeholder="https://.../version.json"></div>
+ <div class="row"><button class="ghost" onclick="api('/api/settings',{update_url:$('update_url').value}).then(done)">Salva indirizzo</button></div>
+</div>
 </main>
 <div class="toast" id="toast"></div>
 <script>
@@ -96,7 +106,8 @@ function dayText(m){return m==0?'Una volta':m==127?'Ogni giorno':days.filter((d,
 async function load(){
  const s=await api('/api/state');const st=s.settings;
  $('status').textContent=`Batteria ${s.battery<0?'-':s.battery+'%'}${s.charging?' (in carica)':''} · Wi-Fi ${s.wifi||'access point'} · SD ${s.sd?'ok':'assente'}`;
- for(const k of['brightness','screen_timeout','volume','timezone','device_name'])$(k).value=st[k];
+ for(const k of['brightness','screen_timeout','volume','timezone','device_name','update_url'])$(k).value=st[k]||'';
+ $('fw_ver').textContent=s.version||'-';
  for(const k of['always_on','tap_to_wake','wake_on_notification','time_24h','auto_time','ble'])$(k).checked=st[k];
  const al=await api('/api/alarms');$('alarms').innerHTML=al.length?al.map(a=>`<div class="row"><label><b>${String(a.hour).padStart(2,'0')}:${String(a.minute).padStart(2,'0')}</b> ${a.label}<br><small class="status">${dayText(a.days)}</small></label><input type="checkbox" ${a.enabled?'checked':''} onchange="api('/api/alarms',{id:${a.id},enabled:this.checked}).then(done)"><button class="red" onclick="api('/api/alarms',{id:${a.id},delete:true}).then(r=>{done(r);load()})">✕</button></div>`).join(''):'<div class="row status">Nessuna sveglia</div>';
  const w=await api('/api/wifi');$('wifi').innerHTML=w.length?w.map(n=>`<div class="row"><label>${n}</label><button class="red" onclick="api('/api/wifi',{ssid:'${n.replace(/'/g,"\\'")}',delete:true}).then(r=>{done(r);load()})">✕</button></div>`).join(''):'<div class="row status">Nessuna rete salvata</div>';
@@ -141,6 +152,13 @@ async function fsUpload(files){const list=[...files];if(!list.length)return;$('f
  for(let i=0;i<list.length;i++){const f=list[i];$('fs_info').textContent=`Caricamento ${i+1}/${list.length}: ${f.name}`;
   const r=await putFile(join(cwd,f.name),f,p=>{$('fs_bar_fill').style.width=((i+p)/list.length*100)+'%'});if(r.ok)ok++;else toast(f.name+': '+(r.message||'errore'))}
  $('fs_bar').hidden=true;$('fs_bar_fill').style.width='0';$('fs_files').value='';toast(ok+' file caricati');fsLoad(cwd)}
+function fwUpload(){const f=$('fw_file').files[0];if(!f)return toast('Scegli il file .bin');const x=new XMLHttpRequest(),t0=Date.now();
+ $('fw_bar').hidden=false;$('fw_info').textContent='Invio...';x.open('POST','/api/firmware');
+ x.upload.onprogress=e=>{if(!e.lengthComputable)return;const p=e.loaded/e.total,s=(Date.now()-t0)/1000;$('fw_bar_fill').style.width=(p*100)+'%';
+  $('fw_info').textContent=`${Math.round(p*100)}% · ${(e.loaded/1024/Math.max(s,.1)).toFixed(0)} KB/s`};
+ x.onload=()=>{let r={ok:false};try{r=JSON.parse(x.responseText)}catch(e){}$('fw_info').textContent=r.message||(r.ok?'Fatto':'Errore');
+  $('fw_bar').hidden=true;if(r.ok){$('fw_info').textContent='Installato e verificato: l’orologio si riavvia con la nuova versione. Per tornare a questa pagina riapri l’app Web.'}};
+ x.onerror=()=>{$('fw_info').textContent='Errore di rete';$('fw_bar').hidden=true};x.send(f)}
 drawDays();load();fsLoad('/');
 </script>
 </body>

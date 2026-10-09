@@ -51,6 +51,12 @@ esp_err_t wifi_acquire(uint32_t timeout_ms);
 /* Done with the network: Wi-Fi goes off shortly after the last release. */
 void wifi_release(void);
 
+/*
+ * Big transfers (firmware update): no modem sleep while held, several times
+ * faster. Balanced calls: wifi_set_fast(true) ... wifi_set_fast(false).
+ */
+void wifi_set_fast(bool fast);
+
 bool wifi_is_connected(void);
 
 /* Name of the network we are on ("" if none). */

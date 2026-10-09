@@ -9,6 +9,7 @@ idf_component_register(
         "audio.c"
         "sdcard.c"
         "button.c"
+        "usb_console.c"
     INCLUDE_DIRS
         "include"
     PRIV_INCLUDE_DIRS
@@ -27,4 +28,6 @@ idf_component_register(
         esp_pm
         esp_codec_dev
         esp_lcd_sh8601
+        esp_driver_usb_serial_jtag
+        esp_hal_usb
 )
