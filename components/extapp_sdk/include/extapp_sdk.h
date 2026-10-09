@@ -26,4 +26,10 @@ esp_err_t extapp_sdk_init(void);
 /* Restart into the launcher. Does not return. */
 void extapp_return_to_launcher(void);
 
+/*
+ * Restart this app once more (e.g. to free the USB port). The next restart
+ * after that goes to the launcher again. Does not return.
+ */
+void extapp_restart_self(void);
+
 #endif

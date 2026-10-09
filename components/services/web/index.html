@@ -13,6 +13,12 @@ main{max-width:640px;margin:auto;padding:16px}h1{font-size:28px;margin:8px 4px 4
 textarea{width:100%;min-height:260px;font:13px monospace}input[type=range]{flex:1}button{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:10px 18px;font:inherit;cursor:pointer}
 button.ghost{background:var(--hi)}button.red{background:var(--red)}.status{color:var(--dim);margin:0 4px}.chip{display:inline-block;padding:4px 10px;border-radius:99px;background:var(--hi);margin:2px;cursor:pointer;user-select:none}.chip.on{background:var(--accent)}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--hi);padding:10px 18px;border-radius:99px;opacity:0;transition:.3s}.toast.show{opacity:1}
+.fs-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--hi)}.fs-row:last-child{border:0}
+.fs-name{flex:1;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fs-meta{color:var(--dim);font-size:13px;white-space:nowrap}
+.icon{background:var(--hi);padding:6px 10px;border-radius:10px;cursor:pointer;user-select:none}.icon.red{background:#3a1715;color:var(--red)}
+.crumbs{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:10px 0}.crumbs span{cursor:pointer;color:var(--accent)}
+.bar{height:6px;background:var(--hi);border-radius:3px;overflow:hidden;margin:6px 0}.bar div{height:100%;width:0;background:var(--accent);transition:width .2s}
+.tools{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0}
 </style>
 </head>
 <body>
@@ -54,6 +60,25 @@ button.ghost{background:var(--hi)}button.red{background:var(--red)}.status{color
 </div>
 
 
+<h2>Scheda SD</h2>
+<div class="card">
+ <div class="crumbs" id="fs_crumbs"></div>
+ <div class="tools">
+  <button class="ghost" onclick="fsUp()">&#8593; Su</button>
+  <button class="ghost" onclick="fsMkdir()">+ Cartella</button>
+  <button class="ghost" onclick="fsNewFile()">+ File</button>
+  <label class="icon" style="padding:10px 16px">Carica file<input type="file" id="fs_files" multiple hidden onchange="fsUpload(this.files)"></label>
+ </div>
+ <div class="bar" id="fs_bar" hidden><div id="fs_bar_fill"></div></div>
+ <div class="status" id="fs_info"></div>
+ <div id="fs_list"></div>
+</div>
+<div class="card" id="fs_editor" hidden>
+ <div class="row"><label id="fs_edit_name"></label></div>
+ <div class="row" style="display:block"><textarea id="fs_text" spellcheck="false"></textarea></div>
+ <div class="row"><button onclick="fsSave()">Salva</button><button class="ghost" onclick="fsCloseEditor()">Chiudi</button></div>
+</div>
+
 <h2>App esterne</h2>
 <div class="card">
  <div class="row"><label>Nome</label><input type="text" id="u_name" placeholder="MiaApp"></div>
@@ -81,7 +106,42 @@ function addWifi(){api('/api/wifi',{ssid:$('w_ssid').value,password:$('w_pass').
 function saveSettings(){const b={};for(const k of['brightness','screen_timeout','volume'])b[k]=+$(k).value;for(const k of['timezone','device_name'])b[k]=$(k).value;for(const k of['always_on','tap_to_wake','wake_on_notification','time_24h','auto_time','ble'])b[k]=$(k).checked;api('/api/settings',b).then(done)}
 function syncTime(){api('/api/time',{epoch:Math.floor(Date.now()/1000)}).then(done)}
 async function upload(){const f=$('u_file').files[0],n=$('u_name').value.trim();if(!f||!n)return toast('Scegli nome e file');toast('Caricamento...');const r=await fetch('/api/upload?name='+encodeURIComponent(n),{method:'POST',body:f});done(await r.json())}
-drawDays();load();
+
+let cwd='/',editing=null;const TEXT=/\.(txt|json|ini|csv|md|html|htm|cfg|log|m3u|pls)$/i;
+const join=(d,n)=>(d.endsWith('/')?d:d+'/')+n;
+const enc=p=>encodeURIComponent(p);
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function size(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
+async function fsLoad(path){
+ const r=await fetch('/api/fs/list?path='+enc(path)).then(x=>x.json()).catch(()=>({ok:false,message:'Errore di rete'}));
+ if(!r.ok){toast(r.message||'Errore');return}
+ cwd=r.path;const parts=cwd.split('/').filter(x=>x);let acc='';
+ $('fs_crumbs').innerHTML='<span data-p="/" onclick="fsLoad(this.dataset.p)">SD</span>'+parts.map(p=>{acc+='/'+p;return ' / <span data-p="'+esc(acc)+'" onclick="fsLoad(this.dataset.p)">'+esc(p)+'</span>'}).join('');
+ $('fs_info').textContent=`${r.free_mb} MB liberi su ${r.total_mb} MB`;
+ const items=r.entries.sort((a,b)=>(b.d-a.d)||a.n.localeCompare(b.n));
+ $('fs_list').innerHTML=items.length?items.map((e,i)=>{const p=join(cwd,e.n);return `<div class="fs-row"><span>${e.d?'&#128193;':'&#128196;'}</span>`+
+  `<span class="fs-name" onclick="fsOpen(${i})">${esc(e.n)}</span><span class="fs-meta">${e.d?'':size(e.s)}</span>`+
+  (e.d?'':`<a class="icon" href="/api/fs/get?path=${enc(p)}&dl=1">&#11015;</a>`)+
+  `<span class="icon" onclick="fsRename(${i})">&#9998;</span><span class="icon red" onclick="fsDelete(${i})">&#10005;</span></div>`}).join(''):'<div class="status" style="padding:12px 0">Cartella vuota</div>';
+ window.fsItems=items;
+}
+function fsUp(){if(cwd==='/')return;fsLoad(cwd.substring(0,cwd.lastIndexOf('/'))||'/')}
+function fsOpen(i){const e=fsItems[i],p=join(cwd,e.n);if(e.d)fsLoad(p);else if(TEXT.test(e.n)&&e.s<65536)fsEdit(p);else location.href='/api/fs/get?path='+enc(p)+'&dl=1'}
+async function fsPost(url){const r=await fetch(url,{method:'POST'}).then(x=>x.json()).catch(()=>({ok:false,message:'Errore di rete'}));done(r);fsLoad(cwd);return r.ok}
+function fsMkdir(){const n=prompt('Nome della nuova cartella');if(n)fsPost('/api/fs/mkdir?path='+enc(join(cwd,n.trim())))}
+function fsRename(i){const e=fsItems[i],n=prompt('Nuovo nome',e.n);if(n&&n!==e.n)fsPost('/api/fs/rename?from='+enc(join(cwd,e.n))+'&to='+enc(join(cwd,n.trim())))}
+function fsDelete(i){const e=fsItems[i];if(confirm((e.d?'Eliminare la cartella "'+e.n+'" e tutto il suo contenuto?':'Eliminare "'+e.n+'"?')))fsPost('/api/fs/delete?path='+enc(join(cwd,e.n)))}
+function fsNewFile(){const n=prompt('Nome del nuovo file (es. note.txt)');if(n){editing=join(cwd,n.trim());$('fs_edit_name').textContent=editing;$('fs_text').value='';$('fs_editor').hidden=false;$('fs_text').focus()}}
+async function fsEdit(p){const t=await fetch('/api/fs/get?path='+enc(p)).then(x=>x.text());editing=p;$('fs_edit_name').textContent=p;$('fs_text').value=t;$('fs_editor').hidden=false;$('fs_editor').scrollIntoView({behavior:'smooth'})}
+async function fsSave(){if(!editing)return;const r=await fetch('/api/fs/put?path='+enc(editing),{method:'POST',body:$('fs_text').value}).then(x=>x.json()).catch(()=>({ok:false}));done(r);fsLoad(cwd)}
+function fsCloseEditor(){editing=null;$('fs_editor').hidden=true}
+function putFile(path,file,onp){return new Promise(res=>{const x=new XMLHttpRequest();x.open('POST','/api/fs/put?path='+enc(path));
+ x.upload.onprogress=e=>{if(e.lengthComputable)onp(e.loaded/e.total)};x.onload=()=>{try{res(JSON.parse(x.responseText))}catch(e){res({ok:false})}};x.onerror=()=>res({ok:false,message:'Errore di rete'});x.send(file)})}
+async function fsUpload(files){const list=[...files];if(!list.length)return;$('fs_bar').hidden=false;let ok=0;
+ for(let i=0;i<list.length;i++){const f=list[i];$('fs_info').textContent=`Caricamento ${i+1}/${list.length}: ${f.name}`;
+  const r=await putFile(join(cwd,f.name),f,p=>{$('fs_bar_fill').style.width=((i+p)/list.length*100)+'%'});if(r.ok)ok++;else toast(f.name+': '+(r.message||'errore'))}
+ $('fs_bar').hidden=true;$('fs_bar_fill').style.width='0';$('fs_files').value='';toast(ok+' file caricati');fsLoad(cwd)}
+drawDays();load();fsLoad('/');
 </script>
 </body>
 </html>

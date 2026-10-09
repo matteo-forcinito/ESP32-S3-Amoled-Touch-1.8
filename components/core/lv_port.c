@@ -45,6 +45,7 @@ static QueueHandle_t s_async = NULL;
 static volatile bool s_running = true;
 static volatile bool s_touch_irq = false;
 static void (*s_back_cb)(void) = NULL;
+static bool (*s_back_allowed)(void) = NULL;
 
 /* Touch tracking (only used in the lvgl task). */
 static int s_released_reads = 0;
@@ -142,7 +143,8 @@ static void touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         s_was_pressed = true;
         s_start_x = (int16_t)x;
         s_start_y = (int16_t)y;
-        s_edge_candidate = x < EDGE_ZONE_PX;
+        /* Only where "back" makes sense: elsewhere the touch is left alone. */
+        s_edge_candidate = x < EDGE_ZONE_PX && (s_back_allowed == NULL || s_back_allowed());
     }
     else if (s_edge_candidate && (int)x - s_start_x > EDGE_SWIPE_DX &&
              abs((int)y - s_start_y) < EDGE_SWIPE_MAX_DY)
@@ -437,4 +439,9 @@ void lv_port_refresh_now(void)
 void lv_port_set_back_gesture_cb(void (*cb)(void))
 {
     s_back_cb = cb;
+}
+
+void lv_port_set_back_gesture_filter(bool (*allowed)(void))
+{
+    s_back_allowed = allowed;
 }

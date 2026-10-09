@@ -13,16 +13,17 @@ Human docs: README.md (Italian). Old Arduino code: `Launcher/`, `External APPS/`
 idf.py build                      # -Werror on our code, keep it warning-free
 cd examples/hello_app; idf.py build
 cd external_apps/webradio; idf.py build   # the web radio is an EXTERNAL app
+cd external_apps/remote; idf.py build     # Remote Control (BLE/USB HID keyboard, swipe typing)
 ```
 
 Base system = small OS (alarms, notifications, BLE companion, settings, web page,
 USB drive, external app launcher). Heavy features go to external apps that reuse
-the components (EXTRA_COMPONENT_DIRS + EXCLUDE_COMPONENTS). `webradio` is excluded
-from the base build in the root CMakeLists.
+the components (EXTRA_COMPONENT_DIRS + EXCLUDE_COMPONENTS). `webradio` and `hid_link` are
+excluded from the base build in the root CMakeLists.
 
 ## Layers (each uses only those below)
 
-apps (shell + apps) -> companion / webradio -> services -> ui -> core -> hardware. Board pins/flags only in
+apps (shell + apps) -> companion / webradio / hid_link -> services -> ui -> core -> hardware. Board pins/flags only in
 `components/hardware/boards/*.h`; above hardware use `board_info()`.
 
 ## Rules that prevent bugs
@@ -58,4 +59,7 @@ apps (shell + apps) -> companion / webradio -> services -> ui -> core -> hardwar
 - Text fonts are built-in Montserrat + TTF fallback for accents: always use UI_FONT_*.
 - Edit scripts on Windows: never pass "\0" through bash heredocs (becomes a NUL byte);
   write a .py file instead.
+- Remote Control: swipe decoder `external_apps/remote/main/swipe.c` is pure C (host-testable);
+  its layout must match the key geometry drawn in keyboard_app.c. Changing BLE<->USB
+  restarts the app (`extapp_restart_self()`): HID stacks are never torn down at runtime.
 - New .c files go into the component's CMakeLists SRCS; new apps into apps.c `s_apps[]`.

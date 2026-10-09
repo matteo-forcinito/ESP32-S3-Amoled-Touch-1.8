@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # The web radio engine is used by the external WebRadio app, not by the base system.
-set(EXCLUDE_COMPONENTS "webradio")
+set(EXCLUDE_COMPONENTS "webradio" "hid_link")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(amoled_watch)

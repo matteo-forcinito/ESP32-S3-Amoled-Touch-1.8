@@ -11,7 +11,7 @@ funzioni pesanti (come la web radio HTTPS) sono **app esterne** sulla microSD.
 - Quadrante digitale + always-on, centro di controllo, notifiche, launcher a griglia
 - Sveglie (melodia crescente, posticipa), timer e cronometro, meteo (Open-Meteo, senza API key)
 - Telefono via Bluetooth LE con **Gadgetbridge**: notifiche, chiamate, ora, meteo, controlli musica, trova telefono
-- Pagina web di configurazione (Wi-Fi, sveglie, impostazioni, upload app) con QR code
+- Pagina web di configurazione (Wi-Fi, sveglie, impostazioni, upload app, **file della microSD**) con QR code
 - **Unità USB**: la microSD vista dal PC come chiavetta
 - App esterne dalla microSD (anche quelle Arduino del vecchio launcher)
 - Risparmio energetico: CPU 40-240 MHz, light sleep automatico, Wi-Fi solo quando serve
@@ -19,6 +19,8 @@ funzioni pesanti (come la web radio HTTPS) sono **app esterne** sulla microSD.
 **App esterne incluse**
 - `external_apps/webradio` — web radio HTTPS/HLS stereo (m2o, Radio Zeta, Radio 105 HipHop,
   Radio Italia, Jazz Radio, Virgin Radio, ...)
+- `external_apps/remote` — **Remote Control**: l'orologio come tastiera Bluetooth o USB, con
+  scrittura a scorrimento (mouse, media, presentazioni, Teams, gamepad in arrivo)
 - `examples/hello_app` — l'app esterna minima, da copiare per crearne di nuove
 
 ## Build e flash
@@ -58,6 +60,30 @@ BOOT torna al sistema. Stazioni: `components/webradio/radios_default.txt`, oppur
 `/sdcard/config/radios.txt` (formato `nome | genere | url`); tieni premuta una stazione
 per i preferiti.
 
+### App esterna Remote Control
+
+Stessa procedura (`cd external_appsemote`, `idf.py set-target esp32s3`, `idf.py build`),
+file in `/sdcard/apps/Remote/` (`Remote.bin` <- `build/remote.bin`, `icon.png`, `manifest.json`).
+
+- **Collegamento**: *Via* sceglie Bluetooth o USB (l'app si riavvia). Bluetooth: dal PC o
+  dal telefono aggiungi un dispositivo Bluetooth → *AMOLED Remote*. USB: collega il cavo, è
+  una tastiera USB (mentre è in modalità USB la console seriale non è disponibile).
+- **Opzioni**: layout della tastiera *del computer* (Italiano / US, serve per accenti e
+  simboli), dizionario (IT / EN), scrittura a scorrimento, maiuscola automatica, dimentica
+  dispositivi associati.
+- **Tastiera**: 4 righe da 7 tasti grandi su tutto lo schermo (`qwertyu / iopasdf / ghjklzx /
+  cvbnm,.`), riga in basso `⇧  123  '  spazio  ⌫  ⏎`.
+  - *tocco*: conta il tasto dove il dito si è appoggiato (un fumetto lo mostra);
+  - *tieni premuta una vocale*: lettera accentata (e → è);
+  - *scorrimento*: passa sulle lettere senza staccare il dito; la parola viene scritta con lo
+    spazio davanti, sopra compaiono 2 alternative (toccane una per sostituirla);
+  - ⌫ subito dopo uno scorrimento cancella tutta la parola; tenuto premuto ripete;
+  - due spazi = ". " e maiuscola; `123` → numeri e accenti, `#+=` → simboli, frecce, Esc, Tab.
+- Il riconoscimento (`main/swipe.c`) confronta il percorso del dito con la forma di ogni
+  parola (DTW su 24 punti) tra 20.000 parole per lingua, pesate per frequenza; in simulazione
+  la parola giusta è la prima nell'85% dei casi e tra le prime 3 nel 98%.
+  Dizionari: liste di frequenza *FrequencyWords* (MIT, dati OpenSubtitles).
+
 ## Architettura
 
 Ogni livello usa solo quelli sotto di lui.
@@ -67,13 +93,15 @@ main/                   ordine di avvio del sistema base
 components/
   apps/                 shell (quadrante, tile, launcher) + app di sistema
   companion/            telefono via BLE (Gadgetbridge / protocollo Bangle.js)
-  services/             wifi, time_sync, alarm, notify, weather, sound, web_server, extapp, http_stream
+  services/             wifi, time_sync, alarm, notify, weather, sound, web_server (+ file SD), extapp, http_stream
+  hid_link/             tastiera/mouse/media via BLE HID o USB HID - usato da Remote Control
   webradio/             motore radio (HTTPS, HLS, MP3/AAC) - usato solo dall'app esterna
   ui/                   tema, font, widget (pagine, righe, slider, toast, dialoghi, tastiera, icone)
   core/                 lv_port, power, app manager, settings, state, clock, sys (worker, diagnostica)
   hardware/             BSP: board.h + driver (SH8601, FT3168, AXP2101, PCF85063, ES8311, SD, pulsanti)
-  extapp_sdk/           2 funzioni per le app esterne
+  extapp_sdk/           3 funzioni per le app esterne
 external_apps/webradio/ app esterna Web Radio
+external_apps/remote/   app esterna Remote Control (tastiera a scorrimento)
 examples/hello_app/     app esterna minima
 ```
 
@@ -130,6 +158,15 @@ che non servono: hanno lo stesso aspetto e la stessa gestione energetica del sis
 | Wi-Fi | a riferimento contato, si spegne 8 s dopo l'ultimo uso; modem sleep |
 | BLE | advertising veloce 60 s dopo avvio/disconnessione, poi ogni 1-1,5 s; connessione con slave latency |
 | Audio | codec e amplificatore spenti quando non suona nulla |
+
+## Pagina web: file della microSD
+
+La scheda *Scheda SD* della pagina web sfoglia le cartelle, crea cartelle e file di testo,
+carica più file insieme (barra di avanzamento), scarica, rinomina, cancella (anche cartelle
+intere) e modifica i file di testo fino a 64 KB. Le API sono in `services/web/web_files.c`
+(`/api/fs/list|get|put|mkdir|rename|delete`); i percorsi con `..` vengono rifiutati e la
+radice della scheda non si può cancellare. I caricamenti scrivono un file `.part` e lo
+rinominano solo a trasferimento completo.
 
 ## Telefono (Gadgetbridge)
 

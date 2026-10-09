@@ -53,4 +53,10 @@ void lv_port_refresh_now(void);
 /* Called (in the lvgl task) for a "swipe right from the left edge". */
 void lv_port_set_back_gesture_cb(void (*cb)(void));
 
+/*
+ * Asked when a touch starts at the left edge: false = no back gesture now,
+ * the touch goes to the UI untouched (apps that swipe themselves, home).
+ */
+void lv_port_set_back_gesture_filter(bool (*allowed)(void));
+
 #endif

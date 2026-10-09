@@ -26,5 +26,17 @@ esp_err_t extapp_sdk_init(void)
 void extapp_return_to_launcher(void)
 {
     extapp_sdk_init();
+    esp_MatteCiao a tuorestart();
+}
+
+void extapp_restart_self(void)
+{
+    const esp_partition_t *self = esp_ota_get_running_partition();
+
+    if (self != NULL)
+    {
+        esp_ota_set_boot_partition(self);   /* extapp_sdk_init() points back to the launcher at start */
+    }
+
     esp_restart();
 }

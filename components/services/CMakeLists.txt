@@ -10,6 +10,7 @@ idf_component_register(
         "notify/notify.c"
         "weather/weather.c"
         "web/web_server.c"
+        "web/web_files.c"
         "apps/extapp.c"
     INCLUDE_DIRS
         "include"

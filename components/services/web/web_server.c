@@ -8,6 +8,8 @@
 #include "services/alarm.h"
 #include "services/wifi.h"
 
+#include "web_files.h"
+
 #include "cJSON.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
@@ -371,7 +373,7 @@ static esp_err_t handle_upload(httpd_req_t *req)
 static esp_err_t start_httpd(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.max_uri_handlers = 16;
+    config.max_uri_handlers = 24;
     config.stack_size = 6144;
     config.lru_purge_enable = true;
     config.recv_wait_timeout = 15;
@@ -399,6 +401,8 @@ static esp_err_t start_httpd(void)
     {
         httpd_register_uri_handler(s_server, &routes[i]);
     }
+
+    web_files_register(s_server);   /* SD card file manager */
 
     return ESP_OK;
 }

@@ -533,6 +533,12 @@ static void button_handler(button_id_t button, button_event_t event)
     }
 }
 
+static bool back_gesture_allowed(void)
+{
+    const app_t *app = app_current();
+    return app != NULL && !(app->flags & APP_FLAG_NO_BACK_GESTURE);
+}
+
 static void back_gesture(void)
 {
     const app_t *app = app_current();
@@ -563,5 +569,6 @@ void app_manager_init(void)
     lv_port_unlock();
 
     lv_port_set_back_gesture_cb(back_gesture);
+    lv_port_set_back_gesture_filter(back_gesture_allowed);
     power_set_button_handler(button_handler);
 }
