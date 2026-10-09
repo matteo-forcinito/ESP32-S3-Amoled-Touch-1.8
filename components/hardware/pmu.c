@@ -111,6 +111,11 @@ int pmu_battery_mv(void)
     return ((data[0] & 0x3F) << 8) | data[1];
 }
 
+int pmu_battery_mv_fresh(void)
+{
+    return pmu_battery_mv();   /* the AXP2101 register is always live */
+}
+
 bool pmu_is_charging(void)
 {
     return ((read_reg(REG_STATUS2) >> 5) & 0x03) == 0x01;
@@ -156,6 +161,7 @@ esp_err_t pmu_init(void) { return ESP_ERR_NOT_SUPPORTED; }
 bool pmu_present(void) { return false; }
 int pmu_battery_percent(void) { return -1; }
 int pmu_battery_mv(void) { return 0; }
+int pmu_battery_mv_fresh(void) { return 0; }
 bool pmu_battery_present(void) { return false; }
 bool pmu_is_charging(void) { return false; }
 bool pmu_usb_present(void) { return true; }

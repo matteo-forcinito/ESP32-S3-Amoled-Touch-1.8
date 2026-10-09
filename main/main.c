@@ -18,6 +18,7 @@
 #include "core/sys.h"
 #include "hardware/board.h"
 #include "companion/ble_companion.h"
+#include "services/battery_health.h"
 #include "services/fw_update.h"
 #include "services/notify.h"
 #include "services/sound.h"
@@ -46,6 +47,7 @@ void app_main(void)
 
     /* Services the UI reads at creation time. */
     notify_init();
+    battery_health_init();
     weather_init();
     sound_service_init();
     ESP_ERROR_CHECK(wifi_service_init());
