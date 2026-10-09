@@ -28,3 +28,15 @@ else()
 endif()
 
 project(amoled_watch)
+
+# Every firmware of the family also writes build/firmware.bin: the same file
+# name on every device. The project name above stays the firmware's identity:
+# the updater only accepts an image with the same project name (so an AMOLED
+# image can never be installed on a Watcher, and vice versa).
+idf_build_get_property(build_dir BUILD_DIR)
+add_custom_target(firmware_bin ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${build_dir}/${CMAKE_PROJECT_NAME}.bin" "${build_dir}/firmware.bin"
+    DEPENDS gen_project_binary
+    COMMENT "Copying the image to build/firmware.bin"
+    VERBATIM)
+

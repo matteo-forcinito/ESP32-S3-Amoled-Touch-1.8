@@ -36,6 +36,7 @@ env:
   PRODUCT_NAME: AMOLED Watch (Waveshare ESP32-S3-Touch-AMOLED-1.8)
   APP_BIN: amoled_watch.bin
   RELEASES_REPO: matteo-forcinito/watch-firmware-releases
+  RELEASE_BIN: firmware.bin   # same asset name for every product (the tag tells which)
 
 jobs:
   release:
@@ -106,7 +107,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist/usb-flash/bootloader dist/usb-flash/partition_table
-          cp "build/$APP_BIN" dist/
+          cp "build/$APP_BIN" "dist/$RELEASE_BIN"
           # USB recovery: the separate images + their addresses (flash_args keeps the
           # build's folder layout). Never a merged image: its padding would erase
           # the nvsfactory partition of the Watcher (device identity).
@@ -114,7 +115,7 @@ jobs:
           cp build/partition_table/partition-table.bin dist/usb-flash/partition_table/
           cp build/ota_data_initial.bin "build/$APP_BIN" build/flash_args dist/usb-flash/
           python3 -c "import shutil; shutil.make_archive('dist/${PRODUCT}-usb-flash-${{ steps.version.outputs.version }}', 'zip', 'dist', 'usb-flash')"
-          sha256sum "dist/$APP_BIN" | tee dist/SHA256SUMS.txt
+          sha256sum "dist/$RELEASE_BIN" | tee dist/SHA256SUMS.txt
 
       - name: Publish the release (public repo)
         uses: softprops/action-gh-release@v2
@@ -130,10 +131,10 @@ jobs:
             Firmware ${{ env.PRODUCT_NAME }} ${{ steps.version.outputs.version }} (channel: ${{ steps.version.outputs.channel }}).
 
             - Online update: Settings > Aggiornamento on the watch.
-            - From a PC: upload `${{ env.APP_BIN }}` in the watch's web page ("Aggiornamento firmware").
+            - From a PC: upload `${{ env.RELEASE_BIN }}` in the watch's web page ("Aggiornamento firmware").
             - USB: unzip `usb-flash` and run `python -m esptool --chip esp32s3 -b 921600 write-flash @flash_args` in it.
           files: |
-            dist/${{ env.APP_BIN }}
+            dist/${{ env.RELEASE_BIN }}
             dist/${{ env.PRODUCT }}-usb-flash-${{ steps.version.outputs.version }}.zip
             dist/SHA256SUMS.txt
 
@@ -148,9 +149,9 @@ jobs:
           git clone --depth 1 "https://x-access-token:${RELEASES_TOKEN}@github.com/${RELEASES_REPO}.git" public
           python3 tools/update_catalog.py "public/${PRODUCT}.json" \
             --version "$VERSION" \
-            --url "https://github.com/${RELEASES_REPO}/releases/download/${TAG}/${APP_BIN}" \
-            --size "$(stat -c %s "dist/$APP_BIN")" \
-            --sha256 "$(sha256sum "dist/$APP_BIN" | cut -d' ' -f1)" \
+            --url "https://github.com/${RELEASES_REPO}/releases/download/${TAG}/${RELEASE_BIN}" \
+            --size "$(stat -c %s "dist/$RELEASE_BIN")" \
+            --sha256 "$(sha256sum "dist/$RELEASE_BIN" | cut -d' ' -f1)" \
             --notes "$notes"
           cd public
           git config user.name "release-bot"
