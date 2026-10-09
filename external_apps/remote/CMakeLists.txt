@@ -5,9 +5,15 @@
 # watch's web page.
 cmake_minimum_required(VERSION 3.16)
 
+# Shared watch OS: the repo's submodule, or the sibling folder before it exists.
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../watch-os-common/components")
+    set(WATCH_OS_COMMON "${CMAKE_CURRENT_LIST_DIR}/../../watch-os-common")
+else()
+    set(WATCH_OS_COMMON "${CMAKE_CURRENT_LIST_DIR}/../../../watch-os-common")
+endif()
 set(EXTRA_COMPONENT_DIRS
-    "${CMAKE_CURRENT_LIST_DIR}/../../components"                  # this board's hardware
-    "${CMAKE_CURRENT_LIST_DIR}/../../../watch-os-common/components") # shared watch OS
+    "${CMAKE_CURRENT_LIST_DIR}/../../components"   # this board's hardware
+    "${WATCH_OS_COMMON}/components")                # shared watch OS
 # The platform + hid_link: not the base system's apps, services or radio.
 set(EXCLUDE_COMPONENTS "apps" "services" "companion" "webradio")
 

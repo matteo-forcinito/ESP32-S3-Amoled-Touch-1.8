@@ -1,0 +1,151 @@
+# Release: push a branch named release/X.Y.Z (stable channel) or
+# release/X.Y.Z-dev.N (dev channel: test builds) and this workflow
+#   1. builds the firmware with version X.Y.Z (FW_VERSION -> PROJECT_VER)
+#   2. publishes it as release "amoled-vX.Y.Z" in the PUBLIC binaries-only repo
+#   3. adds it to amoled.json there (tools/update_catalog.py): the catalog of every
+#      release and the newest of each channel, read by the watches
+#   4. tags this (private) repo with amoled-vX.Y.Z
+#
+# Secrets (Settings > Secrets and variables > Actions):
+#   REPOS_TOKEN     fine-grained token, Contents: read on watch-os-common (the submodule);
+#                   used only to fetch the submodule
+#   RELEASES_TOKEN  fine-grained token, Contents: read and write on watch-firmware-releases
+#
+# Pushing the same branch again republishes the same version (fixes before
+# anyone updated). Watches only offer a HIGHER version on their channel (any
+# version can still be picked by hand in Settings > Aggiornamento > Tutte le
+# versioni): for a new release use a new branch, e.g. release/1.2.1.
+
+name: Release
+
+on:
+  push:
+    branches: ["release/**"]
+
+concurrency:
+  group: release-amoled
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # the tag in this repo
+
+env:
+  PRODUCT: amoled
+  PRODUCT_NAME: AMOLED Watch (Waveshare ESP32-S3-Touch-AMOLED-1.8)
+  APP_BIN: amoled_watch.bin
+  RELEASES_REPO: matteo-forcinito/watch-firmware-releases
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v6.1
+
+    steps:
+      - name: Version from the branch name
+        id: version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#release/}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::The branch must be release/X.Y.Z or release/X.Y.Z-dev.N (got $GITHUB_REF_NAME)"
+            exit 1
+          fi
+          if [[ "$version" == *-* ]]; then channel=dev; else channel=stable; fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "tag=${PRODUCT}-v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Submodule watch-os-common (private, read-only token)
+        shell: bash
+        env:
+          REPOS_TOKEN: ${{ secrets.REPOS_TOKEN }}
+        run: |
+          git config --global --add safe.directory '*'
+          auth="url.https://x-access-token:${REPOS_TOKEN}@github.com/.insteadOf=https://github.com/"
+          git -c "$auth" submodule update --init --recursive
+
+      - name: Build
+        shell: bash
+        env:
+          FW_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          . "$IDF_PATH/export.sh"
+          rm -f sdkconfig                      # always from sdkconfig.defaults
+          idf.py set-target esp32s3
+          idf.py build
+          # The version really inside the image (what the watch compares).
+          python - <<'EOF'
+          import json, os
+          desc = json.load(open("build/project_description.json"))
+          assert desc["project_version"] == os.environ["FW_VERSION"], desc["project_version"]
+          print("version in the image:", desc["project_version"])
+          EOF
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist/usb-flash/bootloader dist/usb-flash/partition_table
+          cp "build/$APP_BIN" dist/
+          # USB recovery: the separate images + their addresses (flash_args keeps the
+          # build's folder layout). Never a merged image: its padding would erase
+          # the nvsfactory partition of the Watcher (device identity).
+          cp build/bootloader/bootloader.bin dist/usb-flash/bootloader/
+          cp build/partition_table/partition-table.bin dist/usb-flash/partition_table/
+          cp build/ota_data_initial.bin "build/$APP_BIN" build/flash_args dist/usb-flash/
+          python -c "import shutil; shutil.make_archive('dist/${PRODUCT}-usb-flash-${{ steps.version.outputs.version }}', 'zip', 'dist', 'usb-flash')"
+          sha256sum "dist/$APP_BIN" | tee dist/SHA256SUMS.txt
+
+      - name: Publish the release (public repo)
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ env.RELEASES_REPO }}
+          token: ${{ secrets.RELEASES_TOKEN }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: main
+          name: ${{ env.PRODUCT_NAME }} ${{ steps.version.outputs.version }}
+          prerelease: ${{ steps.version.outputs.channel == 'dev' }}
+          make_latest: ${{ steps.version.outputs.channel == 'stable' }}
+          body: |
+            Firmware ${{ env.PRODUCT_NAME }} ${{ steps.version.outputs.version }} (channel: ${{ steps.version.outputs.channel }}).
+
+            - Online update: Settings > Aggiornamento on the watch.
+            - From a PC: upload `${{ env.APP_BIN }}` in the watch's web page ("Aggiornamento firmware").
+            - USB: unzip `usb-flash` and run `python -m esptool --chip esp32s3 -b 921600 write-flash @flash_args` in it.
+          files: |
+            dist/${{ env.APP_BIN }}
+            dist/${{ env.PRODUCT }}-usb-flash-${{ steps.version.outputs.version }}.zip
+            dist/SHA256SUMS.txt
+
+      - name: Add it to the catalog the watches read
+        shell: bash
+        env:
+          RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          notes="$(git log -1 --format=%s)"
+          git clone --depth 1 "https://x-access-token:${RELEASES_TOKEN}@github.com/${RELEASES_REPO}.git" public
+          python tools/update_catalog.py "public/${PRODUCT}.json" \
+            --version "$VERSION" \
+            --url "https://github.com/${RELEASES_REPO}/releases/download/${TAG}/${APP_BIN}" \
+            --size "$(stat -c %s "dist/$APP_BIN")" \
+            --sha256 "$(sha256sum "dist/$APP_BIN" | cut -d' ' -f1)" \
+            --notes "$notes"
+          cd public
+          git config user.name "release-bot"
+          git config user.email "release-bot@users.noreply.github.com"
+          git add "${PRODUCT}.json"
+          git diff --cached --quiet && { echo "catalog unchanged"; exit 0; }
+          git commit -m "${PRODUCT} ${VERSION}"
+          git push
+
+      - name: Tag this repo
+        shell: bash
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git tag -f "$TAG"
+          git push -f origin "refs/tags/$TAG"
