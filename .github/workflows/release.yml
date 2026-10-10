@@ -159,7 +159,14 @@ jobs:
           git add "${PRODUCT}.json"
           git diff --cached --quiet && { echo "catalog unchanged"; exit 0; }
           git commit -m "${PRODUCT} ${VERSION}"
-          git push
+          # Several products may release at once: if another one pushed its
+          # catalog meanwhile, put ours on top (each touches only its own file).
+          for attempt in 1 2 3 4 5; do
+            git push && exit 0
+            sleep $((attempt * 5))
+            git pull --rebase
+          done
+          exit 1
 
       - name: Tag this repo
         shell: bash
