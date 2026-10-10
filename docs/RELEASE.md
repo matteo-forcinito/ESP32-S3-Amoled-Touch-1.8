@@ -54,7 +54,7 @@ la cache del chip più volte al secondo); l'avanzamento animato è nel browser.
 | `watch-os-common` | privato | sistema operativo condiviso (submodule dei firmware) |
 | `SenseCap-Watcher-W1-A` | privato | firmware Watcher |
 | `ESP32-S3-Amoled-Touch-1.8` | privato | firmware AMOLED |
-| `esp32-s3-epaper-1.54` | privato | sveglia e-paper (solo CI: release e catalogo, flash via USB) |
+| `esp32-s3-epaper-1.54` | privato | sveglia e-paper (MENU > UPDATE; il primo passaggio a due slot va fatto via USB) |
 | `watch-firmware-releases` | **pubblico** | solo binari: release + cataloghi `amoled.json`, `amoled.json`, `epaper.json` |
 
 Il codice resta privato; l'orologio non contiene token. I binari pubblici non contengono
