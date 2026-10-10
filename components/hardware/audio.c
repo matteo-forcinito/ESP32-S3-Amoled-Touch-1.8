@@ -11,6 +11,7 @@
 #include "esp_pm.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "sdkconfig.h"
 
 static const char *TAG = "audio";
 
@@ -59,6 +60,13 @@ static esp_err_t i2s_open(uint32_t rate, int channels)
 
 esp_err_t audio_start(uint32_t sample_rate, int channels)
 {
+#if CONFIG_WATCH_MONKEY_TEST
+    /* The monkey test may start a countdown by mistake: the speaker stays off, always. */
+    (void)sample_rate;
+    (void)channels;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+
     channels = channels == 2 ? 2 : 1;
 
     if (s_codec != NULL)

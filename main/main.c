@@ -13,6 +13,7 @@
 #include "core/app.h"
 #include "core/clock.h"
 #include "core/lv_port.h"
+#include "core/monkey.h"
 #include "core/power.h"
 #include "core/settings.h"
 #include "core/sys.h"
@@ -77,6 +78,8 @@ void app_main(void)
     }
 
     sys_heap_log("ready");
+    sys_health_start();
+    monkey_start();   /* stress test, only in builds with CONFIG_WATCH_MONKEY_TEST */
     ESP_LOGI(TAG, "Ready");
 
     /*

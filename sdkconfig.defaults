@@ -172,3 +172,13 @@ CONFIG_ESP_COREDUMP_DATA_FORMAT_ELF=y
 CONFIG_ESP_COREDUMP_CHECKSUM_SHA256=y
 CONFIG_FREERTOS_CHECK_STACKOVERFLOW_CANARY=y
 CONFIG_ESP_TASK_WDT_TIMEOUT_S=10
+# A task stuck for 10 s restarts the watch with a core dump instead of
+# leaving it frozen (and the dump says where it was stuck).
+CONFIG_ESP_TASK_WDT_PANIC=y
+# Per-task free stack in the health report (sys_health_log).
+CONFIG_FREERTOS_USE_TRACE_FACILITY=y
+# Measured with the health report: the IPC tasks (cross-core calls: GPIO ISR,
+# cache, Bluetooth) had 388 bytes left and the idle tasks (they run the
+# automatic light sleep) 604: too close to an overflow.
+CONFIG_ESP_IPC_TASK_STACK_SIZE=2048
+CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=2304

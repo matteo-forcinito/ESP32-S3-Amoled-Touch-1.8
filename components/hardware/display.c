@@ -8,6 +8,7 @@
 #include "esp_lcd_sh8601.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 
 static const char *TAG = "display";
@@ -44,6 +45,24 @@ static display_done_cb_t s_done = NULL;
 static void *s_done_ctx = NULL;
 static bool s_sleeping = false;
 
+/*
+ * The esp_lcd SPI IO is not thread safe: the lvgl task draws while the power
+ * task changes brightness or puts the panel to sleep. Both count the DMA
+ * transfers in flight; done at the same time the count goes wrong and a later
+ * call waits forever for a transfer that already finished (frozen screen).
+ */
+static SemaphoreHandle_t s_io_lock = NULL;
+
+static void io_lock(void)
+{
+    xSemaphoreTakeRecursive(s_io_lock, portMAX_DELAY);
+}
+
+static void io_unlock(void)
+{
+    xSemaphoreGiveRecursive(s_io_lock);
+}
+
 static bool on_transfer_done(esp_lcd_panel_io_handle_t io, esp_lcd_panel_io_event_data_t *data, void *ctx)
 {
     (void)io;
@@ -62,13 +81,24 @@ static bool on_transfer_done(esp_lcd_panel_io_handle_t io, esp_lcd_panel_io_even
 static esp_err_t send_command(uint8_t command, const uint8_t *data, size_t length)
 {
     int lcd_cmd = (int)((LCD_OPCODE_WRITE << 24) | ((uint32_t)command << 8));
-    return esp_lcd_panel_io_tx_param(s_io, lcd_cmd, data, length);
+
+    io_lock();
+    esp_err_t err = esp_lcd_panel_io_tx_param(s_io, lcd_cmd, data, length);
+    io_unlock();
+
+    return err;
 }
 
 esp_err_t display_init(display_done_cb_t done, void *ctx)
 {
     s_done = done;
     s_done_ctx = ctx;
+    s_io_lock = xSemaphoreCreateRecursiveMutex();
+
+    if (s_io_lock == NULL)
+    {
+        return ESP_ERR_NO_MEM;
+    }
 
     const size_t max_transfer = BOARD_LCD_WIDTH * CONFIG_BOARD_DRAW_BUFFER_LINES * sizeof(uint16_t);
     const spi_bus_config_t bus_config = SH8601_PANEL_BUS_QSPI_CONFIG(
@@ -132,7 +162,11 @@ esp_err_t display_init(display_done_cb_t done, void *ctx)
 
 esp_err_t display_draw(int x1, int y1, int x2, int y2, const void *pixels)
 {
-    return esp_lcd_panel_draw_bitmap(s_panel, x1, y1, x2 + 1, y2 + 1, pixels);
+    io_lock();
+    esp_err_t err = esp_lcd_panel_draw_bitmap(s_panel, x1, y1, x2 + 1, y2 + 1, pixels);
+    io_unlock();
+
+    return err;
 }
 
 /* The SH8601 only accepts windows starting on even and ending on odd pixels. */
@@ -158,6 +192,8 @@ esp_err_t display_sleep(bool sleep)
 
     esp_err_t err;
 
+    io_lock();   /* the whole sequence: no frame in the middle of it */
+
     if (sleep)
     {
         uint8_t zero = 0;
@@ -174,6 +210,7 @@ esp_err_t display_sleep(bool sleep)
     }
 
     s_sleeping = sleep;
+    io_unlock();
 
     return err;
 }
