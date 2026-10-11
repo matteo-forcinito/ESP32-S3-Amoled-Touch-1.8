@@ -20,12 +20,11 @@
 #include "services/wifi.h"
 #include "ui/ui.h"
 #include "webradio/radio.h"
+#include "webradio/radio_app.h"
 
 #include "esp_log.h"
 
 static const char *TAG = "webradio_app";
-
-extern const app_t radio_app;   /* radio_ui.c */
 
 /* Back on the radio page: leave the app. */
 static bool home_back(void)
