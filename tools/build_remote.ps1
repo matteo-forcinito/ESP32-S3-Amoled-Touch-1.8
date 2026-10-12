@@ -66,7 +66,7 @@ if (-not $Development)
     New-Item -ItemType Directory -Path $package -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $buildRoot 'remote.bin') -Destination (Join-Path $package 'Remote.bin')
     Copy-Item -LiteralPath (Join-Path $appRoot 'manifest.json'), (Join-Path $appRoot 'icon.png') -Destination $package
-    $zipPath = Join-Path $projectRoot "dist/remote-$Board-1.0.0.zip"
+    $zipPath = Join-Path $projectRoot "dist/remote-$Board-1.0.1.zip"
     Compress-Archive -LiteralPath (Join-Path $projectRoot 'dist/remote/apps') -DestinationPath $zipPath -Force
     $hash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
     [IO.File]::WriteAllText("$zipPath.sha256", "$hash  $([IO.Path]::GetFileName($zipPath))`n")

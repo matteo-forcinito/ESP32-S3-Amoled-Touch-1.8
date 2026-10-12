@@ -112,7 +112,7 @@ jobs:
           mkdir -p dist/remote/apps/Remote
           cp external_apps/remote/build-release/remote.bin dist/remote/apps/Remote/Remote.bin
           cp external_apps/remote/manifest.json external_apps/remote/icon.png dist/remote/apps/Remote/
-          python3 -c "import shutil; shutil.make_archive('dist/remote-${PRODUCT}-1.0.0', 'zip', 'dist/remote')"
+          python3 -c "import shutil; shutil.make_archive('dist/remote-${PRODUCT}-1.0.1', 'zip', 'dist/remote')"
 
       - name: Package
         shell: bash
@@ -126,7 +126,7 @@ jobs:
           cp build/partition_table/partition-table.bin dist/usb-flash/partition_table/
           cp build/ota_data_initial.bin "build/$APP_BIN" build/flash_args dist/usb-flash/
           python3 -c "import shutil; shutil.make_archive('dist/${PRODUCT}-usb-flash-${{ steps.version.outputs.version }}', 'zip', 'dist', 'usb-flash')"
-          sha256sum "dist/$RELEASE_BIN" "dist/remote-${PRODUCT}-1.0.0.zip" | tee dist/SHA256SUMS.txt
+          sha256sum "dist/$RELEASE_BIN" "dist/remote-${PRODUCT}-1.0.1.zip" | tee dist/SHA256SUMS.txt
 
       - name: Publish the release (public repo)
         uses: softprops/action-gh-release@v2
@@ -141,14 +141,14 @@ jobs:
           body: |
             Firmware ${{ env.PRODUCT_NAME }} ${{ steps.version.outputs.version }} (channel: ${{ steps.version.outputs.channel }}).
 
-            - Remote 1.0.0: external HID app with swipe and PC keyboards, mouse, media, presentations, meeting controls and gamepad. Use the package for this device.
+            - Remote 1.0.1: external HID app with swipe and PC keyboards, mouse, media, presentations, meeting controls and gamepad. Use the package for this device.
             - Online update: Settings > Aggiornamento on the watch.
             - From a PC: upload `${{ env.RELEASE_BIN }}` in the watch's web page ("Aggiornamento firmware").
             - USB: unzip `usb-flash` and run `python -m esptool --chip esp32s3 -b 921600 write-flash @flash_args` in it.
           files: |
             dist/${{ env.RELEASE_BIN }}
             dist/${{ env.PRODUCT }}-usb-flash-${{ steps.version.outputs.version }}.zip
-            dist/remote-${{ env.PRODUCT }}-1.0.0.zip
+            dist/remote-${{ env.PRODUCT }}-1.0.1.zip
             dist/SHA256SUMS.txt
 
       - name: Add it to the catalog the watches read
