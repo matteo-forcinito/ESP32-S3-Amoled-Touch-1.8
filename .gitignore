@@ -21,3 +21,7 @@ external_apps/*/build-remote-dev/
 dist/
 
 __pycache__/
+
+external_apps/*/build-release/
+
+build-market-release/

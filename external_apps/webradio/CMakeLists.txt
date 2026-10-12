@@ -5,7 +5,9 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Shared watch OS: the repo's submodule, or the sibling folder before it exists.
-if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../watch-os-common/components")
+if(DEFINED ENV{WATCH_OS_COMMON_DIR})
+    set(WATCH_OS_COMMON "$ENV{WATCH_OS_COMMON_DIR}")
+elseif(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../watch-os-common/components")
     set(WATCH_OS_COMMON "${CMAKE_CURRENT_LIST_DIR}/../../watch-os-common")
 else()
     set(WATCH_OS_COMMON "${CMAKE_CURRENT_LIST_DIR}/../../../watch-os-common")
@@ -16,5 +18,10 @@ set(EXTRA_COMPONENT_DIRS
 # Only the platform and the radio engine: not the base system's apps or Bluetooth.
 set(EXCLUDE_COMPONENTS "apps" "companion" "hid_link")
 
+if(DEFINED ENV{WEBRADIO_VERSION})
+    set(PROJECT_VER "$ENV{WEBRADIO_VERSION}")
+else()
+    set(PROJECT_VER "1.0.0")
+endif()
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(webradio)

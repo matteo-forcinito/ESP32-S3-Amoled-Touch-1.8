@@ -114,6 +114,28 @@ jobs:
           cp external_apps/remote/manifest.json external_apps/remote/icon.png dist/remote/apps/Remote/
           python3 -c "import shutil; shutil.make_archive('dist/remote-${PRODUCT}-1.0.1', 'zip', 'dist/remote')"
 
+      - name: Build and package ORBIT
+        shell: bash
+        run: |
+          . "$HOME/esp-idf/export.sh"
+          idf.py -C external_apps/orbit -B external_apps/orbit/build-release set-target esp32s3
+          idf.py -C external_apps/orbit -B external_apps/orbit/build-release build
+          mkdir -p dist/orbit/apps/Orbit
+          cp external_apps/orbit/build-release/orbit.bin dist/orbit/apps/Orbit/Orbit.bin
+          cp external_apps/orbit/manifest.json external_apps/orbit/icon.png dist/orbit/apps/Orbit/
+          python3 -c "import shutil; shutil.make_archive('dist/orbit-${PRODUCT}-1.0.0', 'zip', 'dist/orbit')"
+
+      - name: Build and package WebRadio
+        shell: bash
+        run: |
+          . "$HOME/esp-idf/export.sh"
+          idf.py -C external_apps/webradio -B external_apps/webradio/build-release set-target esp32s3
+          idf.py -C external_apps/webradio -B external_apps/webradio/build-release build
+          mkdir -p dist/webradio/apps/WebRadio
+          cp external_apps/webradio/build-release/webradio.bin dist/webradio/apps/WebRadio/WebRadio.bin
+          cp external_apps/webradio/manifest.json external_apps/webradio/icon.png dist/webradio/apps/WebRadio/
+          python3 -c "import shutil; shutil.make_archive('dist/webradio-${PRODUCT}-1.0.0', 'zip', 'dist/webradio')"
+
       - name: Package
         shell: bash
         run: |
@@ -126,7 +148,7 @@ jobs:
           cp build/partition_table/partition-table.bin dist/usb-flash/partition_table/
           cp build/ota_data_initial.bin "build/$APP_BIN" build/flash_args dist/usb-flash/
           python3 -c "import shutil; shutil.make_archive('dist/${PRODUCT}-usb-flash-${{ steps.version.outputs.version }}', 'zip', 'dist', 'usb-flash')"
-          sha256sum "dist/$RELEASE_BIN" "dist/remote-${PRODUCT}-1.0.1.zip" | tee dist/SHA256SUMS.txt
+          sha256sum "dist/$RELEASE_BIN" "dist/remote-${PRODUCT}-1.0.1.zip" "dist/orbit-${PRODUCT}-1.0.0.zip" "dist/webradio-${PRODUCT}-1.0.0.zip" | tee dist/SHA256SUMS.txt
 
       - name: Publish the release (public repo)
         uses: softprops/action-gh-release@v2
@@ -143,6 +165,10 @@ jobs:
 
             - New internal Sensors app: onboard accelerometer, gyroscope and chip temperature. Bounded I2C reads outside LVGL; sensor configuration restored on exit and screen-off. Tested on AMOLED 1.8 V1. Values use sensor axes without calibration.
             - Voice Memos: fullscreen red recording button, swipe-down lock, dated local WAV files on microSD, playback and live level bars. Spoken recording/playback verified on AMOLED 1.8 V1. Maximum 60 seconds; no automatic capture or upload. Development console disabled.
+            - Personal GitHub Marketplace in Settings and launcher: grid/list/cards, app details by swipe, explicit download, open/update and confirmed removal. SD packages include a checked binary and icon. Stable/dev channels; no automatic downloads or updates.
+            - ORBIT 1.0.0: offline focus, breaks and paced breathing; fullscreen kinetic planet, perimeter timer and local statistics. Package is specific to this board. Development console disabled.
+            - Marketplace installation currently requires microSD; on AMOLED 1.75 browsing is available but cloud installation is deferred.
+            - Marketplace download/removal and ORBIT launch/return tested on AMOLED 1.8. Other boards compile against the same source; hardware validation remains device-specific.
             - Remote 1.0.1: external HID app with swipe and PC keyboards, mouse, media, presentations, meeting controls and gamepad. Use the package for this device.
             - Online update: Settings > Aggiornamento on the watch.
             - From a PC: upload `${{ env.RELEASE_BIN }}` in the watch's web page ("Aggiornamento firmware").
@@ -151,6 +177,8 @@ jobs:
             dist/${{ env.RELEASE_BIN }}
             dist/${{ env.PRODUCT }}-usb-flash-${{ steps.version.outputs.version }}.zip
             dist/remote-${{ env.PRODUCT }}-1.0.1.zip
+            dist/orbit-${{ env.PRODUCT }}-1.0.0.zip
+            dist/webradio-${{ env.PRODUCT }}-1.0.0.zip
             dist/SHA256SUMS.txt
 
       - name: Add it to the catalog the watches read
