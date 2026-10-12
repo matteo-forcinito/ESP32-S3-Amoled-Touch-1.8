@@ -141,6 +141,7 @@ jobs:
           body: |
             Firmware ${{ env.PRODUCT_NAME }} ${{ steps.version.outputs.version }} (channel: ${{ steps.version.outputs.channel }}).
 
+            - Optional perimeter progress: Settings > Display, battery on rectangular home, firmware/app install and countdown. Rotary-only launcher navigation. Physical checks listed in validation notes remain pending.
             - Remote 1.0.1: external HID app with swipe and PC keyboards, mouse, media, presentations, meeting controls and gamepad. Use the package for this device.
             - Online update: Settings > Aggiornamento on the watch.
             - From a PC: upload `${{ env.RELEASE_BIN }}` in the watch's web page ("Aggiornamento firmware").
