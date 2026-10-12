@@ -13,3 +13,11 @@ external_apps/*/sdkconfig
 external_apps/*/sdkconfig.old
 external_apps/*/managed_components/
 external_apps/*/dependencies.lock
+
+external_apps/*/build-remote/
+
+external_apps/*/build-remote-dev/
+
+dist/
+
+__pycache__/
