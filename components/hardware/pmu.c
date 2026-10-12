@@ -1,4 +1,5 @@
 #include "hardware/pmu.h"
+#include "audio_supply.h"
 
 #include "hardware/i2c_bus.h"
 
@@ -75,6 +76,88 @@ esp_err_t pmu_init(void)
              pmu_is_charging() ? ", charging" : "", pmu_usb_present() ? ", USB" : "");
 
     return ESP_OK;
+}
+
+/* The original Waveshare schematic joins ALDO1 and ALDO2 as A3V3.
+ * Digital codec I2C works from VCC3V3 even when this analogue rail is off.
+ * Preserve other rails and restore the initial audio state after use. */
+static uint8_t s_audio_enable, s_audio_voltage[2];
+static bool s_audio_supply_held = false;
+static bool s_audio_supply_changed = false;
+
+esp_err_t audio_supply_acquire(void)
+{
+    if (s_dev == NULL || s_audio_supply_held)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    uint8_t enabled;
+    esp_err_t err = i2c_bus_read_byte(s_dev, 0x90, &enabled);
+    if (err == ESP_OK)
+    {
+        err = i2c_bus_read_byte(s_dev, 0x92, &s_audio_voltage[0]);
+    }
+    if (err == ESP_OK)
+    {
+        err = i2c_bus_read_byte(s_dev, 0x93, &s_audio_voltage[1]);
+    }
+    if (err != ESP_OK)
+    {
+        return err;
+    }
+    s_audio_enable = enabled & 3;
+    ESP_LOGI(TAG, "Audio supply: ALDO1 %s %d mV, ALDO2 %s %d mV",
+             (enabled & 1) ? "on" : "off", 500 + (s_audio_voltage[0] & 31) * 100,
+             (enabled & 2) ? "on" : "off", 500 + (s_audio_voltage[1] & 31) * 100);
+    s_audio_supply_held = true;
+    s_audio_supply_changed = (enabled & 3) != 3 || (s_audio_voltage[0] & 31) != 28 ||
+                             (s_audio_voltage[1] & 31) != 28;
+    if (!s_audio_supply_changed)
+    {
+        return ESP_OK; /* Do not toggle already-correct analogue rails. */
+    }
+    if ((s_audio_voltage[0] & 31) != 28 || (s_audio_voltage[1] & 31) != 28)
+    {
+        err = i2c_bus_write_byte(s_dev, 0x90, enabled & ~3);
+        if (err == ESP_OK)
+        {
+            err = i2c_bus_write_byte(s_dev, 0x92, (s_audio_voltage[0] & ~31) | 28);
+        }
+        if (err == ESP_OK)
+        {
+            err = i2c_bus_write_byte(s_dev, 0x93, (s_audio_voltage[1] & ~31) | 28);
+        }
+    }
+    if (err == ESP_OK)
+    {
+        err = i2c_bus_write_byte(s_dev, 0x90, enabled | 3);
+    }
+    if (err != ESP_OK)
+    {
+        audio_supply_release();
+    }
+    return err;
+}
+
+void audio_supply_release(void)
+{
+    if (s_audio_supply_held)
+    {
+        if (!s_audio_supply_changed)
+        {
+            s_audio_supply_held = false;
+            return;
+        }
+        uint8_t enabled;
+        if (i2c_bus_read_byte(s_dev, 0x90, &enabled) == ESP_OK)
+        {
+            i2c_bus_write_byte(s_dev, 0x90, enabled & ~3);
+            i2c_bus_write_byte(s_dev, 0x92, s_audio_voltage[0]);
+            i2c_bus_write_byte(s_dev, 0x93, s_audio_voltage[1]);
+            i2c_bus_write_byte(s_dev, 0x90, (enabled & ~3) | s_audio_enable);
+        }
+        s_audio_supply_held = false;
+    }
 }
 
 bool pmu_present(void)
@@ -155,7 +238,10 @@ void pmu_power_off(void)
     }
 }
 
-#else   /* boards without a PMU */
+#else
+esp_err_t audio_supply_acquire(void) { return ESP_ERR_NOT_SUPPORTED; }
+void audio_supply_release(void) {}
+   /* boards without a PMU */
 
 esp_err_t pmu_init(void) { return ESP_ERR_NOT_SUPPORTED; }
 bool pmu_present(void) { return false; }

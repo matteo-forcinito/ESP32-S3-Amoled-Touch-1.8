@@ -23,6 +23,7 @@ static const board_info_t s_info = {
     .height = BOARD_LCD_HEIGHT,
     .round = BOARD_LCD_ROUND,
     .has_touch = BOARD_HAS_TOUCH,
+    .has_buttons = true,
     .has_knob = false,
     .has_pmu = BOARD_HAS_PMU,
     .has_rtc = BOARD_HAS_RTC,
