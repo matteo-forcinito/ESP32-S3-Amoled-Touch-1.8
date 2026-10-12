@@ -18,6 +18,8 @@
 #define BOARD_LCD_WIDTH         368
 #define BOARD_LCD_HEIGHT        448
 #define BOARD_LCD_ROUND         0
+/* Nominal visible-area radius from the Waveshare outline, not the case radius. */
+#define BOARD_LCD_CORNER_RADIUS 48
 #define BOARD_LCD_PIN_CS        12
 #define BOARD_LCD_PIN_SCLK      11
 #define BOARD_LCD_PIN_D0        4

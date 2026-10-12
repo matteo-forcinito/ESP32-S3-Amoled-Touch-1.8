@@ -29,6 +29,7 @@ static const board_info_t s_info = {
     .has_audio = BOARD_HAS_AUDIO,
     .has_sdcard = BOARD_HAS_SDCARD,
     .has_usb_otg = true,
+    .display_corner_radius = BOARD_LCD_CORNER_RADIUS,
 };
 
 #if BOARD_HAS_IO_EXPANDER

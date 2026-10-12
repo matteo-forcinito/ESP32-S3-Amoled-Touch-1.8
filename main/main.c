@@ -12,6 +12,7 @@
 #include "apps/apps.h"
 #include "core/app.h"
 #include "core/clock.h"
+#include "core/devcon.h"
 #include "core/lv_port.h"
 #include "core/monkey.h"
 #include "core/power.h"
@@ -79,6 +80,7 @@ void app_main(void)
 
     sys_heap_log("ready");
     sys_health_start();
+    devcon_start();   /* Compiled out in production builds. */
     monkey_start();   /* stress test, only in builds with CONFIG_WATCH_MONKEY_TEST */
     ESP_LOGI(TAG, "Ready");
 

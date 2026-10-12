@@ -141,7 +141,7 @@ jobs:
           body: |
             Firmware ${{ env.PRODUCT_NAME }} ${{ steps.version.outputs.version }} (channel: ${{ steps.version.outputs.channel }}).
 
-            - Optional perimeter progress: Settings > Display, battery on rectangular home, firmware/app install and countdown. Rotary-only launcher navigation. Physical checks listed in validation notes remain pending.
+            - Perimeter progress uses panel geometry and symmetric margins. On rectangular home the battery button is hidden while the perimeter battery is enabled; weather and alarm cards recenter. Settings > Display. Round-panel and AMOLED rendering checks documented; exact glass outline remains subject to physical feedback.
             - Remote 1.0.1: external HID app with swipe and PC keyboards, mouse, media, presentations, meeting controls and gamepad. Use the package for this device.
             - Online update: Settings > Aggiornamento on the watch.
             - From a PC: upload `${{ env.RELEASE_BIN }}` in the watch's web page ("Aggiornamento firmware").
