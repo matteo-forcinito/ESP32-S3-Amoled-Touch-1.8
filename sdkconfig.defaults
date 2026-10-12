@@ -182,3 +182,6 @@ CONFIG_FREERTOS_USE_TRACE_FACILITY=y
 # automatic light sleep) 604: too close to an overflow.
 CONFIG_ESP_IPC_TASK_STACK_SIZE=2048
 CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=2304
+
+# Local voice memos: verified on AMOLED 1.8 V1 with ES8311 and microSD.
+CONFIG_WATCH_VOICE_MEMOS=y

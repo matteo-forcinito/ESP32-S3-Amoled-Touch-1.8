@@ -141,7 +141,8 @@ jobs:
           body: |
             Firmware ${{ env.PRODUCT_NAME }} ${{ steps.version.outputs.version }} (channel: ${{ steps.version.outputs.channel }}).
 
-            - Perimeter progress uses panel geometry and symmetric margins. On rectangular home the battery button is hidden while the perimeter battery is enabled; weather and alarm cards recenter. Settings > Display. Round-panel and AMOLED rendering checks documented; exact glass outline remains subject to physical feedback.
+            - New internal Sensors app: onboard accelerometer, gyroscope and chip temperature. Bounded I2C reads outside LVGL; sensor configuration restored on exit and screen-off. Tested on AMOLED 1.8 V1. Values use sensor axes without calibration.
+            - Voice Memos: fullscreen red recording button, swipe-down lock, dated local WAV files on microSD, playback and live level bars. Spoken recording/playback verified on AMOLED 1.8 V1. Maximum 60 seconds; no automatic capture or upload. Development console disabled.
             - Remote 1.0.1: external HID app with swipe and PC keyboards, mouse, media, presentations, meeting controls and gamepad. Use the package for this device.
             - Online update: Settings > Aggiornamento on the watch.
             - From a PC: upload `${{ env.RELEASE_BIN }}` in the watch's web page ("Aggiornamento firmware").

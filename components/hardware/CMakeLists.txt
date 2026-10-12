@@ -2,6 +2,7 @@ idf_component_register(
     SRCS
         "board.c"
         "i2c_bus.c"
+        "imu.c"
         "display.c"
         "touch.c"
         "pmu.c"
@@ -28,6 +29,7 @@ idf_component_register(
         fatfs
         esp_timer
         esp_pm
+        board_drivers
         esp_codec_dev
         esp_lcd_sh8601
         esp_driver_usb_serial_jtag

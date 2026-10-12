@@ -47,6 +47,9 @@
 #define BOARD_PMU_ADDR          0x34
 
 /* ---- RTC (PCF85063) */
+/* ---- onboard motion sensor (QMI8658) */
+#define BOARD_IMU_ADDR          0x6B
+
 #define BOARD_HAS_RTC           1
 #define BOARD_RTC_ADDR          0x51
 
