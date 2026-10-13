@@ -1,0 +1,11 @@
+﻿python.exe : WARNING: The core dump image offset is not specified. Use partition offset: 
+In C:\Espressif\tools\Microsoft.v6.1.PowerShell_profile.ps1:137 car:5
++     & "C:\Espressif\tools\python\v6.1\venv\Scripts\python.exe" "C:\es ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (WARNING: The co...tition offset: :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+0xc20000.
+ERROR: Failed to load core dump: Invalid application image for coredump: 
+coredump SHA256(22e281ec9) != app SHA256(5cd9fc4c0).
+Executing action: coredump-info
