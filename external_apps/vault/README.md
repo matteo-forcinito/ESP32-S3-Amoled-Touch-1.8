@@ -5,7 +5,7 @@ sul PC come tastiera (Bluetooth o USB) e dashboard HTTPS locale abbinata dal
 dispositivo. Riutilizza il codice condiviso `watch-os-common/vault/main`.
 
 - Build: ambiente ESP-IDF 6.1, `idf.py build`.
-- Versione predefinita: 0.1.0-dev.1; override `VAULT_VERSION`.
+- Versione predefinita: 0.1.0; override `VAULT_VERSION`.
 - Build QA (`VAULT_QA=1`): solo dati sintetici nella cartella `vault-qa` della SD.
 - Console di sviluppo e core dump disattivati; allarmi e gestione energetica di base attivi.
 - Cifratura: PBKDF2-HMAC-SHA256 600.000 iterazioni (acceleratore SHA), AES-256-GCM,

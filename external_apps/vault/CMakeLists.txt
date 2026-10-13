@@ -11,7 +11,7 @@ set(EXCLUDE_COMPONENTS "apps" "companion" "webradio" "hid_link" "watcher_camera"
 if(DEFINED ENV{VAULT_VERSION})
     set(PROJECT_VER "$ENV{VAULT_VERSION}")
 else()
-    set(PROJECT_VER "0.1.0-dev.1")
+    set(PROJECT_VER "0.1.0")
 endif()
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(vault)
