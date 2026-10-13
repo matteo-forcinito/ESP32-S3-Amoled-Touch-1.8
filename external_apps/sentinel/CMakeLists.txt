@@ -11,7 +11,7 @@ set(EXCLUDE_COMPONENTS "apps" "companion" "webradio" "hid_link" "watcher_camera"
 if(DEFINED ENV{SENTINEL_VERSION})
     set(PROJECT_VER "$ENV{SENTINEL_VERSION}")
 else()
-    set(PROJECT_VER "0.1.1")
+    set(PROJECT_VER "0.2.0")
 endif()
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(sentinel)

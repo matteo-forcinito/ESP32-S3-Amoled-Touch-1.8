@@ -27,3 +27,6 @@ external_apps/*/build-release/
 build-market-release/
 
 external_apps/*/build-qa/
+
+external_apps/*/build-*/
+external_apps/*/build-*.log
