@@ -12,7 +12,7 @@ set(EXCLUDE_COMPONENTS "apps" "companion" "webradio" "watcher_camera" "bt_speake
 if(DEFINED ENV{DECK_VERSION})
     set(PROJECT_VER "$ENV{DECK_VERSION}")
 else()
-    set(PROJECT_VER "1.0.0")
+    set(PROJECT_VER "1.0.1")
 endif()
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(deck)

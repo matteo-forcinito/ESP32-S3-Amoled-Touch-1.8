@@ -12,7 +12,7 @@ set(EXCLUDE_COMPONENTS "apps" "companion" "webradio" "hid_link" "watcher_camera"
 if(DEFINED ENV{OMBRA_VERSION})
     set(PROJECT_VER "$ENV{OMBRA_VERSION}")
 else()
-    set(PROJECT_VER "1.0.1")
+    set(PROJECT_VER "1.0.2")
 endif()
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(ombra)
