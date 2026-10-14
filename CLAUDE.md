@@ -86,6 +86,8 @@ apps (shell + apps) -> companion / webradio / hid_link -> services -> ui -> core
 - Text fonts are built-in Montserrat + TTF fallback for accents: always use UI_FONT_*.
 - Edit scripts on Windows: never pass "\0" through bash heredocs (becomes a NUL byte);
   write a .py file instead.
+- After editing kit.js or a dashboard page, syntax-check the JS with `node --check` (a single
+  quote error in kit.js blanks every dashboard).
 - Remote Control: swipe decoder `external_apps/remote/main/swipe.c` is pure C (host-testable);
   its layout must match the key geometry drawn in keyboard_app.c. Changing BLE<->USB
   restarts the app (`extapp_restart_self()`): HID stacks are never torn down at runtime.
