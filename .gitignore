@@ -31,3 +31,4 @@ external_apps/*/build-qa/
 external_apps/*/build-*/
 external_apps/*/build-*.log
 external_apps/*/build.log
+build-osqa/
