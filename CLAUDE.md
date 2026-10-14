@@ -70,7 +70,13 @@ apps (shell + apps) -> companion / webradio / hid_link -> services -> ui -> core
 - UI code never calls blocking service functions (ble_companion_enable, radio_player_stop,
   wifi_acquire): save the setting / post a command / start a task.
 - Crash? Boot log line `sys: PREVIOUS RUN CRASHED` + `idf.py coredump-info`.
-- Wi-Fi is reference counted: every `wifi_acquire()` needs a `wifi_release()`.
+- Wi-Fi is reference counted: every `wifi_acquire()` needs a `wifi_release()`. The Wi-Fi driver
+  (~75 KB internal RAM) exists only while the radio is on (wifi.c driver_up/driver_down).
+- Closing/stopping must never allocate: stop servers, Wi-Fi, BLE via `sys_post()`, not a new task
+  (a task can fail exactly when RAM is short and leave the radio on forever).
+- Internal apps (Pieno, Giornata, Copertura, Ombra, News): code in watch-os-common/<app>/main,
+  compiled into `apps` when CONFIG_APPKIT_HOSTED; dashboards on the OS server at /<app>/;
+  workers run only while open (background jobs need >= 115 KB free internal RAM).
 - Power: hold `power_cpu_boost()` only while really computing; `power_keep_screen_on()` balanced.
 - Settings: append fields at the END of `settings_t` with a default in settings.c.
 - Internal RAM is the scarce resource: LVGL allocates in PSRAM (core/lv_mem_psram.c,
