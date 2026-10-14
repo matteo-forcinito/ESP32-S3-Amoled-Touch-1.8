@@ -16,7 +16,7 @@ endif()
 set(EXTRA_COMPONENT_DIRS "${WATCH_OS_COMMON}/components")
 
 # The web radio engine is used by the external WebRadio app, not by the base system.
-set(EXCLUDE_COMPONENTS "webradio" "hid_link" "appkit")
+set(EXCLUDE_COMPONENTS "webradio" "hid_link")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 # Shown in Settings > Update; the online check compares it with the manifest.
