@@ -163,16 +163,14 @@ jobs:
           body: |
             Firmware ${{ env.PRODUCT_NAME }} ${{ steps.version.outputs.version }} (channel: ${{ steps.version.outputs.channel }}).
 
-            - New internal Sensors app: onboard accelerometer, gyroscope and chip temperature. Bounded I2C reads outside LVGL; sensor configuration restored on exit and screen-off. Tested on AMOLED 1.8 V1. Values use sensor axes without calibration.
-            - Voice Memos: fullscreen red recording button, swipe-down lock, dated local WAV files on microSD, playback and live level bars. Spoken recording/playback verified on AMOLED 1.8 V1. Maximum 60 seconds; no automatic capture or upload. Development console disabled.
-            - Personal GitHub Marketplace in Settings and launcher: grid/list/cards, app details by swipe, explicit download, open/update and confirmed removal. SD packages include a checked binary and icon. Stable/dev channels; no automatic downloads or updates.
-            - ORBIT 1.0.0: offline focus, breaks and paced breathing; fullscreen kinetic planet, perimeter timer and local statistics. Package is specific to this board. Development console disabled.
-            - Marketplace installation currently requires microSD; on AMOLED 1.75 browsing is available but cloud installation is deferred.
-            - Marketplace download/removal and ORBIT launch/return tested on AMOLED 1.8. Other boards compile against the same source; hardware validation remains device-specific.
-            - Remote 1.0.1: external HID app with swipe and PC keyboards, mouse, media, presentations, meeting controls and gamepad. Use the package for this device.
-            - Online update: Settings > Aggiornamento on the watch.
-            - From a PC: upload `${{ env.RELEASE_BIN }}` in the watch's web page ("Aggiornamento firmware").
-            - USB: unzip `usb-flash` and run `python -m esptool --chip esp32s3 -b 921600 write-flash @flash_args` in it.
+            - ECOS: direct ESP-NOW pairing without a router, with matching codes and confirmation on both devices. Explicit LAN pairing is also available.
+            - Family on the watch and main dashboard: paired devices, status, Find/ring and stop, quick messages, and local removal of a pairing.
+            - Authenticated encrypted EL02 transport, persistent command replay protection, bounded Find ringtone, and priority for real alarms.
+            - Update BOTH devices to this release for Family communication. Existing pairing credentials remain valid; no NVS reset is needed. Forgetting is local, not distributed revocation.
+            - All four board firmware builds and C protocol/codec tests passed. Final Family EL02 hardware qualification, power-cycle/fault testing and minimum runtime heap measurements remain pending.
+            - Family listens while its interface is active, during the dashboard lease, or under the external-power/screen-off policy; listening consumes radio power and RAM.
+            - Online update: Settings > Aggiornamento. From a PC, upload firmware.bin through the watch dashboard.
+            - USB: unzip the board-specific usb-flash package and use its flash_args. Keep device NVS and identity partitions.
           files: |
             dist/${{ env.RELEASE_BIN }}
             dist/${{ env.PRODUCT }}-usb-flash-${{ steps.version.outputs.version }}.zip
