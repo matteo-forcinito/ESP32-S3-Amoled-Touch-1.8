@@ -149,6 +149,7 @@ jobs:
             dist/amoled-usb-flash-${{ steps.version.outputs.version }}.zip
             dist/remote-amoled-1.0.1.zip
             dist/orbit-amoled-1.0.0.zip
+            dist/webradio-${{ env.PRODUCT }}-1.0.0.zip
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 7
