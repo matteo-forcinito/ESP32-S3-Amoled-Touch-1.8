@@ -6,6 +6,8 @@ ESP-IDF 6.1, C, LVGL 9.6. Code/comments in English, Allman braces, 4 spaces,
 snake_case, `s_` statics, `TAG` per file, beginner-friendly header comments.
 Human docs: README.md (Italian). Old Arduino code: `Launcher/`, `External APPS/` (reference only).
 
+Beginner guide (Italian): ../watch-os-common/docs/guida/README.md.
+
 ## Shared OS (watch-os-common submodule)
 
 core, ui, services, apps, companion, extapp_sdk, webradio, hid_link and board_api live in
@@ -54,7 +56,7 @@ apps (shell + apps) -> companion / webradio / hid_link -> services -> ui -> core
 - Services publish with `state_set/state_bump` (never lock LVGL). UI observes with
   `lv_subject_add_observer_obj(state_subject(X), cb, obj, user)` (auto-removed with obj).
 - esp_timer callbacks never do real work: `sys_post()` it to the sys worker
-  (NVS writes, esp_wifi_stop, alarm checks, BLE sends). Its stack is 4 KB.
+  (NVS writes, esp_wifi_stop, alarm checks, BLE sends). Its stack is 6 KB (WORKER_STACK in core/sys.c).
 - Never lv_obj_delete() a screen: the app manager retires screens and deletes
   them when LVGL no longer refers to them; app destroy() runs at that moment.
   Args passed to app_open*() must stay valid (the open may be queued): pass
