@@ -191,3 +191,6 @@ CONFIG_APPKIT_HOSTED=y
 CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY=y
 # Advertising + one phone + one scan (Ombra): fewer controller slots, ~3 KB of internal RAM back
 CONFIG_BT_CTRL_BLE_MAX_ACT=3
+
+# Leave internal DMA RAM for Bluetooth + Wi-Fi + Web alongside the screen.
+CONFIG_BOARD_DRAW_BUFFER_LINES=16
