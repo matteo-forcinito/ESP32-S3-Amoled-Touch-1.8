@@ -32,3 +32,8 @@ external_apps/*/build-*/
 external_apps/*/build-*.log
 external_apps/*/build.log
 build-osqa/
+
+# Generated ESP-IDF builds and local release packages (all build variants)
+build-*/
+/release-output/
+/build-*.log
