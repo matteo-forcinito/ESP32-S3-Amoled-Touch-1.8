@@ -66,6 +66,7 @@ void app_main(void)
 
     lv_port_unlock();
     sys_heap_log("ui");
+    ble_companion_reserve();   /* before the services below split the heap */
 
     app_manager_init();
     ESP_ERROR_CHECK(power_init());
