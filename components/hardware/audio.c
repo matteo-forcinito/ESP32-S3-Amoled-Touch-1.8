@@ -16,6 +16,10 @@
 #include "freertos/semphr.h"
 #include "sdkconfig.h"
 
+/* External low-latency apps may override TX depth; OS defaults stay unchanged. */
+#ifndef WATCH_AUDIO_TX_DMA_FRAMES
+#define WATCH_AUDIO_TX_DMA_FRAMES 480
+#endif
 static const char *TAG = "audio";
 
 #if BOARD_HAS_AUDIO
@@ -73,7 +77,8 @@ static esp_err_t i2s_open(uint32_t rate, int channels)
     i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
     chan_config.auto_clear = true;     /* silence instead of old data on underrun */
     chan_config.dma_desc_num = 6;
-    chan_config.dma_frame_num = s_capture ? 256 : 480;   /* ~60 ms of queue at 48 kHz */
+    chan_config.dma_frame_num = s_capture ? 256 : WATCH_AUDIO_TX_DMA_FRAMES;
+    ESP_LOGI(TAG, "DMA %lu x %lu frames", (unsigned long)chan_config.dma_desc_num, (unsigned long)chan_config.dma_frame_num);
 
     esp_err_t err = i2s_new_channel(&chan_config, s_capture ? NULL : &s_tx, s_capture ? &s_rx : NULL);
 
