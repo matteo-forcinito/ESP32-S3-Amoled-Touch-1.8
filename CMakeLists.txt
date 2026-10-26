@@ -24,7 +24,7 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 if(DEFINED ENV{FW_VERSION} AND NOT "$ENV{FW_VERSION}" STREQUAL "")
     set(PROJECT_VER "$ENV{FW_VERSION}")
 else()
-    set(PROJECT_VER "1.16.2")
+    set(PROJECT_VER "1.17.0-dev.2")
 endif()
 
 project(amoled_watch)
