@@ -19,6 +19,7 @@ static const board_info_t s_info = {
     .name = BOARD_NAME,
     .product = "AMOLED Watch",
     .short_name = "AMOLED",
+    .min_aod_brightness = 32,
     .width = BOARD_LCD_WIDTH,
     .height = BOARD_LCD_HEIGHT,
     .round = BOARD_LCD_ROUND,
