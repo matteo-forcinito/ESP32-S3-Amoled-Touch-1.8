@@ -194,3 +194,10 @@ CONFIG_BT_CTRL_BLE_MAX_ACT=3
 
 # Leave internal DMA RAM for Bluetooth + Wi-Fi + Web alongside the screen.
 CONFIG_BOARD_DRAW_BUFFER_LINES=16
+
+# LVGL draws 4 tall bands in PSRAM per frame instead of ~28 short ones in the
+# 16-line DMA buffers above (which become the sender's copy buffers: same
+# internal RAM). Swipes redraw the whole screen: each band walks every widget.
+CONFIG_WATCH_LV_BAND_LINES=112
+# 64-byte data cache lines: faster streaming of the PSRAM bands (no RAM cost).
+CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y

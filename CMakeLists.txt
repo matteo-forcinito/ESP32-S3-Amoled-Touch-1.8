@@ -29,6 +29,11 @@ endif()
 
 project(amoled_watch)
 
+# LVGL draws every frame: build it for speed (-O2) while the rest of the firmware
+# keeps the debug-friendly default (and its warnings as they are).
+idf_component_get_property(lvgl_lib lvgl__lvgl COMPONENT_LIB)
+target_compile_options(${lvgl_lib} PRIVATE -O2)
+
 # Every firmware of the family also writes build/firmware.bin: the same file
 # name on every device. The project name above stays the firmware's identity:
 # the updater only accepts an image with the same project name (so an AMOLED

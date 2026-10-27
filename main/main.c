@@ -44,6 +44,7 @@ void app_main(void)
     ESP_ERROR_CHECK(settings_init());
     ESP_ERROR_CHECK(board_init());
     ESP_ERROR_CHECK(lv_port_init());
+    ui_splash_show();   /* boot animation while the services start (no-op in recovery) */
     clock_init();
     sys_heap_log("display");
 
