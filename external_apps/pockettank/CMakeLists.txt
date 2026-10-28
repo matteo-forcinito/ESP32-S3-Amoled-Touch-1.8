@@ -1,0 +1,13 @@
+# Pocket Tank (github.com/mediacutlet/pocket-tank, MIT) as a Watch OS external app.
+# The tank keeps its own drivers for this board; only extapp_sdk comes from Watch OS.
+cmake_minimum_required(VERSION 3.16)
+if(DEFINED ENV{WATCH_OS_COMMON_DIR})
+    set(WATCH_OS_COMMON "$ENV{WATCH_OS_COMMON_DIR}")
+else()
+    set(WATCH_OS_COMMON "${CMAKE_CURRENT_LIST_DIR}/../../watch-os-common")
+endif()
+set(PT_DIR "${WATCH_OS_COMMON}/pockettank")
+set(EXTRA_COMPONENT_DIRS "${PT_DIR}/firmware/components" "${WATCH_OS_COMMON}/components/extapp_sdk")
+set(PROJECT_VER "0.3.8-wos.1")
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(pockettank_amoled)
