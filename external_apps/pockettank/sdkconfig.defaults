@@ -52,3 +52,8 @@ CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
 # Watch OS external app: the launcher's partition table, its bootloader rollback.
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 CONFIG_ESP_COREDUMP_ENABLE_TO_NONE=y
+# The model installer writes the unpartitioned tail of ota_1 (pt_watch_os.c run_write).
+CONFIG_SPI_FLASH_DANGEROUS_WRITE_ALLOWED=y
+
+# The console on USB, as in Watch OS (the log is read over the cable).
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
