@@ -17,6 +17,10 @@
 #include "sdkconfig.h"
 
 static const char *TAG = "audio";
+/* Requested DMA queue (0 = board default: 6 x 480 frames) and the open one. */
+static int s_req_frames, s_req_num, s_open_frames, s_open_num;
+#define AUDIO_QUEUE_FRAMES (s_req_frames ? s_req_frames : 480)
+#define AUDIO_QUEUE_NUM (s_req_num ? s_req_num : 6)
 
 #if BOARD_HAS_AUDIO
 
@@ -72,8 +76,8 @@ static esp_err_t i2s_open(uint32_t rate, int channels)
 {
     i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
     chan_config.auto_clear = true;     /* silence instead of old data on underrun */
-    chan_config.dma_desc_num = 6;
-    chan_config.dma_frame_num = s_capture ? 256 : 480;   /* ~60 ms of queue at 48 kHz */
+    chan_config.dma_desc_num = s_capture ? 6 : (s_open_num = AUDIO_QUEUE_NUM);
+    chan_config.dma_frame_num = s_capture ? 256 : (s_open_frames = AUDIO_QUEUE_FRAMES);   /* default ~60 ms at 48 kHz */
 
     esp_err_t err = i2s_new_channel(&chan_config, s_capture ? NULL : &s_tx, s_capture ? &s_rx : NULL);
 
@@ -126,7 +130,8 @@ static esp_err_t start_unlocked(uint32_t sample_rate, int channels, bool capture
 
     if (s_codec != NULL)
     {
-        if (sample_rate == s_rate && channels == s_channels)
+        if (sample_rate == s_rate && channels == s_channels &&
+            (capture || (AUDIO_QUEUE_FRAMES == s_open_frames && AUDIO_QUEUE_NUM == s_open_num)))
         {
             return ESP_OK;
         }
@@ -340,7 +345,7 @@ static void stop_unlocked(void)
     s_channels = 0;
 }
 
-esp_err_t audio_start(uint32_t rate, int channels)
+static esp_err_t audio_start_open(uint32_t rate, int channels)
 {
     if (!audio_lock())
     {
@@ -473,9 +478,35 @@ void microphone_stop(void)
     }
 }
 
+/* audio_start() keeps the board's default queue; audio_start_ex() lets a caller
+ * (Solco) choose it. A different queue reopens the output. */
+esp_err_t audio_start_ex(uint32_t sample_rate, int channels, int frames_per_desc, int desc_num)
+{
+    if (frames_per_desc < 0 || (frames_per_desc && frames_per_desc < 8) || frames_per_desc > 1023 ||
+        desc_num < 0 || desc_num == 1 || desc_num > 16)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    s_req_frames = frames_per_desc;
+    s_req_num = desc_num;
+    return audio_start_open(sample_rate, channels);
+}
+
+esp_err_t audio_start(uint32_t sample_rate, int channels)
+{
+    return audio_start_ex(sample_rate, channels, 0, 0);
+}
+
+int audio_queue_frames(void)
+{
+    return s_open_frames * s_open_num;
+}
+
 #else
 
 esp_err_t audio_start(uint32_t sample_rate, int channels) { (void)sample_rate; (void)channels; return ESP_ERR_NOT_SUPPORTED; }
+esp_err_t audio_start_ex(uint32_t sample_rate, int channels, int frames_per_desc, int desc_num) { (void)sample_rate; (void)channels; (void)frames_per_desc; (void)desc_num; return ESP_ERR_NOT_SUPPORTED; }
+int audio_queue_frames(void) { return 0; }
 esp_err_t audio_set_volume(int percent) { (void)percent; return ESP_ERR_NOT_SUPPORTED; }
 esp_err_t audio_write(const int16_t *samples, size_t count) { (void)samples; (void)count; return ESP_ERR_NOT_SUPPORTED; }
 void audio_stop(void) { (void)TAG; }
