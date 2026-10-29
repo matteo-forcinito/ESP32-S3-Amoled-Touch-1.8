@@ -11,6 +11,7 @@ idf_component_register(
         "${REMOTE_SHARED}/swipe.c"
         "${REMOTE_SHARED}/remote_modes.c"
         "${REMOTE_SHARED}/remote_air.c"
+        "${REMOTE_SHARED}/remote_deck.c"
         "${REMOTE_SHARED}/remote_hub_ui.c"
         "${REMOTE_SHARED}/remote_alarm.c"
         "${WATCH_OS_COMMON}/components/apps/alarms/ring_app.c"
