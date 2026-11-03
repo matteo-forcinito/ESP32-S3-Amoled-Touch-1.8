@@ -1,6 +1,6 @@
 # Build the board-specific Remote image, then package it for SD or web upload.
 param(
-    [ValidateSet('watcher', 'amoled', 'amoled175', 'amoled175c', 'knob')]
+    [ValidateSet('watcher', 'amoled', 'amoled175', 'amoled175c', 'knob', 'guition4848')]
     [string]$Board = 'watcher',
     [switch]$Development,
     [switch]$ReuseDevelopmentBuild
@@ -22,6 +22,7 @@ $projects = @{
     amoled175 = 'ESP32-S3-Touch-AMOLED-1.75'
     amoled175c = 'ESP32-S3-Touch-AMOLED-1.75C'
     knob = 'ESP32-S3-Knob-Touch-LCD-1.8'
+    guition4848 = 'ESP32-4848S040C-I'
 }
 $projectRoot = Join-Path $familyRoot $projects[$Board]
 $env:WATCH_OS_COMMON_DIR = (Join-Path $familyRoot 'watch-os-common').Replace('\', '/')
