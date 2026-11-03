@@ -19,6 +19,6 @@ idf_component_register(
         "${WATCH_OS_COMMON}/components/apps/alarms/ring_app.c"
     INCLUDE_DIRS "${REMOTE_SHARED}"
     PRIV_INCLUDE_DIRS "${WATCH_OS_COMMON}/components/apps"
-    PRIV_REQUIRES hardware core ui services hid_link deck_core extapp_sdk nvs_flash
+    PRIV_REQUIRES hardware core ui services hid_link deck_core extapp_sdk nvs_flash esp_app_format
     EMBED_TXTFILES "${REMOTE_SHARED}/dict_it.txt" "${REMOTE_SHARED}/dict_en.txt"
 )
