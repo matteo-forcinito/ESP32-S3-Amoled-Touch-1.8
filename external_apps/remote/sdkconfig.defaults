@@ -127,3 +127,8 @@ CONFIG_ESP_TASK_WDT_TIMEOUT_S=10
 
 # Remote Hub: ESP-NOW radio next to Bluetooth on the hub.
 CONFIG_ESP_COEX_SW_COEXIST_ENABLE=y
+
+# Bond store shared by Watch OS and Remote: each PC keeps ~7 notification subscriptions; with 8 the
+# second host overflowed and NimBLE deleted the oldest one (only the last computer stayed paired).
+CONFIG_BT_NIMBLE_MAX_BONDS=8
+CONFIG_BT_NIMBLE_MAX_CCCDS=80
