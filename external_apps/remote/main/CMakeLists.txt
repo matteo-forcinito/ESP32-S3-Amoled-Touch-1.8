@@ -14,11 +14,12 @@ idf_component_register(
         "${REMOTE_SHARED}/remote_gestures.c"
         "${REMOTE_SHARED}/remote_hosts.c"
         "${REMOTE_SHARED}/remote_deck.c"
+        "${REMOTE_SHARED}/remote_drive.c"
         "${REMOTE_SHARED}/remote_hub_ui.c"
         "${REMOTE_SHARED}/remote_alarm.c"
         "${WATCH_OS_COMMON}/components/apps/alarms/ring_app.c"
     INCLUDE_DIRS "${REMOTE_SHARED}"
     PRIV_INCLUDE_DIRS "${WATCH_OS_COMMON}/components/apps"
-    PRIV_REQUIRES hardware core ui services hid_link deck_core extapp_sdk nvs_flash esp_app_format
+    PRIV_REQUIRES hardware core ui services hid_link deck_core extapp_sdk nvs_flash esp_app_format esp_tinyusb
     EMBED_TXTFILES "${REMOTE_SHARED}/dict_it.txt" "${REMOTE_SHARED}/dict_en.txt"
 )
