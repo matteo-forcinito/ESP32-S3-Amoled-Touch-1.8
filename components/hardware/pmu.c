@@ -74,6 +74,25 @@ esp_err_t pmu_init(void)
 
     ESP_LOGI(TAG, "AXP2101: battery %d%% %d mV%s%s", pmu_battery_percent(), pmu_battery_mv(),
              pmu_is_charging() ? ", charging" : "", pmu_usb_present() ? ", USB" : "");
+    /* Rails as found at boot (they survive an ESP32-only reset): DCDC 0x80,
+     * LDO 0x90 (bit 0 ALDO1 .. 3 ALDO4, 4-5 BLDO, 6 CPUSLDO, 7 DLDO1), ALDO1-4 mV. */
+    ESP_LOGI(TAG, "Rails: DCDC 0x%02x, LDO 0x%02x 0x%02x, ALDO %d/%d/%d/%d mV", read_reg(0x80), read_reg(0x90),
+             read_reg(0x91), 500 + (read_reg(0x92) & 31) * 100, 500 + (read_reg(0x93) & 31) * 100,
+             500 + (read_reg(0x94) & 31) * 100, 500 + (read_reg(0x95) & 31) * 100);
+
+    /*
+     * ALDO1 and ALDO2 (joined as A3V3) feed only the codec's analogue side and the microphone. The AXP2101
+     * starts with every LDO on and keeps them on across ESP32-only resets, so
+     * audio (which switches the rail on just for its use) never turned it off.
+     * Off here; audio switches it on before playing or recording.
+     */
+    uint8_t ldo = read_reg(0x90);
+
+    if (ldo & 0x03)
+    {
+        i2c_bus_write_byte(s_dev, 0x90, ldo & ~0x03);
+        ESP_LOGI(TAG, "Audio rail off until needed");
+    }
 
     return ESP_OK;
 }
