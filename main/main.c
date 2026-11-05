@@ -73,12 +73,14 @@ void app_main(void)
     ESP_ERROR_CHECK(power_init());
 
     /* Network-facing services last: the screen is already up. */
-    time_sync_init();
-
+    /* Bluetooth before the boot time sync: its controller needs one contiguous ~38 KB
+     * block, which the Wi-Fi driver would otherwise split (docs/ORBIT-ESPNOW.md). */
     if (ble_companion_init() != ESP_OK)
     {
         ESP_LOGW(TAG, "Bluetooth not available");
     }
+
+    time_sync_init();
 
     sys_heap_log("ready");
     sys_health_start();
