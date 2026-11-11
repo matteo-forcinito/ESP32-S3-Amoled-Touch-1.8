@@ -16,12 +16,12 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components"   # this board's hardware
     "${WATCH_OS_COMMON}/components")                # shared watch OS
 # Only the platform and the radio engine: not the base system's apps or Bluetooth.
-set(EXCLUDE_COMPONENTS "apps" "companion" "hid_link")
+set(EXCLUDE_COMPONENTS "apps" "companion" "hid_link" "deck_core" "watcher_camera")
 
 if(DEFINED ENV{WEBRADIO_VERSION})
     set(PROJECT_VER "$ENV{WEBRADIO_VERSION}")
 else()
-    set(PROJECT_VER "1.0.0")
+    set(PROJECT_VER "1.1.0")
 endif()
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(webradio)
